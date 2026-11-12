@@ -1,0 +1,2180 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script id="lumi-getcssvar">
+window.getCssVar = window.getCssVar || function(name) {
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  } catch (e) { return ''; }
+};
+</script>
+
+<script id="lumi-canvas-guard">
+(function() {
+  if (window.__lumiCanvasGuard) return;
+  window.__lumiCanvasGuard = true;
+  var MAX_PX = 4096, MIN_FONT_PX = 12;
+  try {
+    var CP = HTMLCanvasElement.prototype;
+    var BOX = {width: 'clientWidth', height: 'clientHeight'}, D = {};
+    Object.keys(BOX).forEach(function(p) {
+      D[p] = Object.getOwnPropertyDescriptor(CP, p);
+    });
+    var tracking = function(el, p) {
+      var box = el[BOX[p]];
+      return !el.style[p] && box > 0 && box === D[p].get.call(el) &&
+          box === el['__lumiLast' + p];
+    };
+    var MAX = {width: 'maxWidth', height: 'maxHeight'};
+    var PAD = {width: ['paddingLeft', 'paddingRight'],
+               height: ['paddingTop', 'paddingBottom']};
+    var avail = function(el, p) {
+      var pe = el.parentElement;
+      if (!pe) return 0;
+      var cs = getComputedStyle(pe);
+      return pe[BOX[p]] - parseFloat(cs[PAD[p][0]]) -
+          parseFloat(cs[PAD[p][1]]);
+    };
+    Object.keys(BOX).forEach(function(p) {
+      var d = D[p];
+      if (!d || !d.set || !d.get) return;
+      Object.defineProperty(CP, p, {
+        configurable: true, enumerable: d.enumerable, get: d.get,
+        set: function(v) {
+          var n = +v, box = this[BOX[p]];
+          if (n > MAX_PX) n = MAX_PX;
+          if (n > box && tracking(this, p)) {
+            var el = this, pins = {};
+            Object.keys(BOX).forEach(function(q) {
+              if (tracking(el, q)) pins[q] = avail(el, q) ||
+                  el['__lumiBox' + q];
+            });
+            Object.keys(pins).forEach(function(q) {
+              el.style[q] = '100%';
+              el.style[MAX[q]] = pins[q] + 'px';
+            });
+            n = box;
+          }
+          this['__lumiBox' + p] = box;
+          this['__lumiLast' + p] = n;
+          d.set.call(this, isNaN(n) ? v : n);
+        }
+      });
+    });
+  } catch (e) {}
+  try {
+    var XP = CanvasRenderingContext2D.prototype;
+    var px = /(\d*\.?\d+)px/;
+    var floorFont = function(ctx) {
+      var f = ctx.font, m = px.exec(f);
+      if (m && +m[1] >= 4 && +m[1] < MIN_FONT_PX) ctx.font = f.replace(px, MIN_FONT_PX + 'px');
+    };
+    ['fillText', 'strokeText', 'measureText'].forEach(function(k) {
+      var o = XP[k];
+      if (typeof o !== 'function') return;
+      XP[k] = function() { floorFont(this); return o.apply(this, arguments); };
+    });
+  } catch (e) {}
+})();
+</script>
+
+<style id="lumi-runtime">
+/* luminous.css */
+/*
+ * Luminous runtime stylesheet — injected once into every generated widget's
+ * <head> by the C++ widget agent (id="lumi-runtime"). Single Source of Truth
+ * for ALL design tokens and pre-baked .lumi-* component classes. The SI prompts
+ * (design.md / html_generation.jinja2 / chart.jinja2) must NOT re-declare these
+ * tokens or component CSS; they only reference them.
+ *
+ * Sections:
+ *   1. Web fonts (Google Sans Flex + Google Sans Code)
+ *   2. Light token :root (from previewer tokens.css, verbatim)
+ *   3. Dark token overrides — REMAPPED to :root so canvas/D3 readers of
+ *      getComputedStyle(document.documentElement) resolve dark values (D3).
+ *   4. Short diagram/chart aliases (bridge legacy --surface / --chart-N names).
+ *   5. In-scope pre-baked .lumi-* component classes.
+ */
+
+/* ============================================================
+ * 1. WEB FONTS  (Google Sans Flex + Google Sans Code only)
+ *    Material Symbols Outlined is intentionally NOT loaded: no in-scope
+ *    .lumi-* control has a functional CSS glyph dependency on it, and the
+ *    icon ban forbids decorative icons (Decision D2).
+ * ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:ital,wght@0,300..700;1,300..700&family=Google+Sans+Code:ital,wght,MONO@0,300..700,0..1;1,300..700,0..1&display=swap');
+
+/* ============================================================
+ * 2. LIGHT TOKENS (:root)
+ * ============================================================ */
+:root {
+  --body-bg: transparent;
+  --ff-sans: 'Google Sans Flex', 'Google Sans Text', 'Google Sans', sans-serif;
+  --ff-mono: 'Google Sans Code', 'Google Sans Mono', monospace;
+
+  --lumi-sys-spacing--xxs: 2px;
+  --lumi-sys-spacing--xs: 4px;
+  --lumi-sys-spacing--s: 8px;
+  --lumi-sys-spacing--m: 12px;
+  --lumi-sys-spacing--l: 16px;
+  --lumi-sys-spacing--xl: 20px;
+  --lumi-sys-spacing--xxl: 24px;
+  --lumi-sys-spacing--3xl: 28px;
+  --lumi-sys-spacing--4xl: 36px;
+
+  --lumi-sys-shape--none: 0px;
+  --lumi-sys-shape--extra-small: 4px;
+  --lumi-sys-shape--small: 8px;
+  --lumi-sys-shape--medium: 12px;
+  --lumi-sys-shape--large: 16px;
+  --lumi-sys-shape--large-increased: 20px;
+  --lumi-sys-shape--large-max: 24px;
+  --lumi-sys-shape--xl: 28px;
+  --lumi-sys-shape--xl-increased: 32px;
+  --lumi-sys-shape--xl-max: 40px;
+  --lumi-sys-shape--xxl: 48px;
+  --lumi-sys-shape--xxl-increased: 56px;
+  --lumi-sys-shape--full: 999px;
+
+  --lumi-sys-elevation--level1: 0 0 20px 0 rgba(0, 0, 0, 0.04);
+  --lumi-sys-elevation--level2: 0 0 20px 0 rgba(0, 0, 0, 0.11);
+
+  --lumi-sys-color--surface: #fdfcfc;
+  --lumi-sys-color--surface-dim: #f2f0f0;
+  --lumi-sys-color--surface-bright: #ffffff;
+  --lumi-sys-color--surface-background: #fdfcfc;
+  --lumi-sys-color--surface-accent: #9dd2ff;
+  --lumi-sys-color--surface-container: #f2f0f0;
+  --lumi-sys-color--surface-container-high: #e6e6e6;
+  --lumi-sys-color--surface-translucent: rgba(255, 255, 255, 0.88);
+  --lumi-sys-color--on-surface: #000000;
+  --lumi-sys-color--on-surface-default: #000000;
+  --lumi-sys-color--on-surface-variant: rgba(0, 0, 0, 0.55);
+  --lumi-sys-color--on-surface-de-emphasis: rgba(0, 0, 0, 0.55);
+  --lumi-sys-color--on-surface-low: rgba(0, 0, 0, 0.08);
+  --lumi-sys-color--positive: #008052;
+  --lumi-sys-color--positive-container: #daf9d4;
+  --lumi-sys-color--on-positive-container: #009954;
+  --lumi-sys-color--error: #de2d29;
+  --lumi-sys-color--error-container: #ffdeec;
+  --lumi-sys-color--on-error-container: #de2d29;
+  --lumi-sys-color--accent: #9dd2ff;
+  --lumi-sys-color--accent-container: #dcf1ff;
+  --lumi-sys-color--accent-fixed: #3186ff;
+  --lumi-sys-color--primary: #3186ff;
+  --lumi-sys-color--on-primary: #ffffff;
+  --lumi-sys-color--black: #000000;
+  --lumi-sys-color--white: #ffffff;
+  --lumi-sys-color--outline: #727676;
+  --lumi-sys-color--stroke-default: #e3e3e3;
+
+  --lumi-sys-opacity-state--hover: 0.08;
+  --lumi-sys-opacity-state--focus: 0.08;
+  --lumi-sys-opacity-state--pressed: 0.12;
+  --lumi-sys-opacity-state--disabled: 0.12;
+  --lumi-sys-opacity-state--disabled-label: 0.38;
+
+  --lumi-sys-color--code-background: #000000;
+  --lumi-sys-color--code-primary-text: #ffffff;
+  --lumi-sys-color--code-blue-text: #4fa0ff;
+  --lumi-sys-color--code-green-text: #60d673;
+  --lumi-sys-color--code-grey-text: #808080;
+  --lumi-sys-color--code-pink-text: #ff96da;
+  --lumi-sys-color--code-purple-text: #969dff;
+  --lumi-sys-color--code-red-text: #ff5a59;
+  --lumi-sys-color--code-yellow-text: #ffdb0f;
+
+  --lumi-sys-color--chart-series-1: #2575fc;
+  --lumi-sys-color--chart-series-2: #5b6e9e;
+  --lumi-sys-color--chart-series-3: #228a49;
+  --lumi-sys-color--chart-series-4: #62991b;
+  --lumi-sys-color--chart-series-5: #1e564d;
+  --lumi-sys-color--chart-series-6: #526a45;
+  --lumi-sys-color--chart-series-7: #2780c4;
+  --lumi-sys-color--chart-series-8: #997112;
+  --lumi-sys-color--chart-series-9: #705ec2;
+  --lumi-sys-color--chart-series-10: #c84288;
+}
+
+/* ============================================================
+ * 3. DARK TOKENS  (REMAPPED to :root — Decision D3)
+ *    Canvas / Chart.js / D3 read getComputedStyle(document.documentElement);
+ *    the theme-sync listener sets data-theme="dark" on <html>, so dark values
+ *    MUST live on :root (not scoped to body) to prevent black-chart regressions.
+ * ============================================================ */
+:root[data-theme="dark"],
+body.dark-mode,
+:root[data-theme="dark"] body {
+  --body-bg: #0f0f0f;
+  --lumi-sys-elevation--level1: 0 0 20px 0 rgba(0, 0, 0, 0.28);
+  --lumi-sys-elevation--level2: 0 0 20px 0 rgba(0, 0, 0, 0.40);
+
+  --lumi-sys-color--surface: #0f0f0f;
+  --lumi-sys-color--surface-dim: #141414;
+  --lumi-sys-color--surface-bright: #1c1c1c;
+  --lumi-sys-color--surface-background: #0f0f0f;
+  --lumi-sys-color--surface-accent: #14204f;
+  --lumi-sys-color--surface-container: #141414;
+  --lumi-sys-color--surface-container-high: #1c1c1c;
+  --lumi-sys-color--surface-translucent: rgba(24, 24, 27, 0.88);
+  --lumi-sys-color--on-surface: #e0e0e0;
+  --lumi-sys-color--on-surface-default: #e0e0e0;
+  --lumi-sys-color--on-surface-variant: rgba(255, 255, 255, 0.55);
+  --lumi-sys-color--on-surface-de-emphasis: rgba(255, 255, 255, 0.55);
+  --lumi-sys-color--on-surface-low: rgba(255, 255, 255, 0.12);
+  --lumi-sys-color--positive: #0ebc5f;
+  --lumi-sys-color--positive-container: #002220;
+  --lumi-sys-color--on-positive-container: #0ebc5f;
+  --lumi-sys-color--error: #ff4c45;
+  --lumi-sys-color--error-container: #3c0202;
+  --lumi-sys-color--on-error-container: #ff4c45;
+  --lumi-sys-color--accent: #1f3b9b;
+  --lumi-sys-color--accent-container: #192967;
+  --lumi-sys-color--accent-fixed: #3186ff;
+  --lumi-sys-color--primary: #9dd2ff;
+  --lumi-sys-color--on-primary: #192967;
+  --lumi-sys-color--black: #000000;
+  --lumi-sys-color--white: #ffffff;
+  --lumi-sys-color--outline: #9a9b9c;
+  --lumi-sys-color--stroke-default: #2d2f38;
+
+  --lumi-sys-color--code-background: #141414;
+  --lumi-sys-color--code-primary-text: #ffffff;
+  --lumi-sys-color--code-blue-text: #4fa0ff;
+  --lumi-sys-color--code-green-text: #60d673;
+  --lumi-sys-color--code-grey-text: #808080;
+  --lumi-sys-color--code-pink-text: #ff96da;
+  --lumi-sys-color--code-purple-text: #969dff;
+  --lumi-sys-color--code-red-text: #ff5a59;
+  --lumi-sys-color--code-yellow-text: #ffdb0f;
+
+  --lumi-sys-color--chart-series-1: #9dd2ff;
+  --lumi-sys-color--chart-series-2: #96a7d6;
+  --lumi-sys-color--chart-series-3: #50e389;
+  --lumi-sys-color--chart-series-4: #c8f585;
+  --lumi-sys-color--chart-series-5: #f5f2e6;
+  --lumi-sys-color--chart-series-6: #dcd8c0;
+  --lumi-sys-color--chart-series-7: #82c7ff;
+  --lumi-sys-color--chart-series-8: #f5d77f;
+  --lumi-sys-color--chart-series-9: #d9ceff;
+  --lumi-sys-color--chart-series-10: #ffa6d7;
+}
+
+/* ============================================================
+ * 3b. OS-LEVEL DARK FALLBACK  (prefers-color-scheme)
+ *     A prior refactor introduced this stylesheet and moved the dark tokens onto
+ *     :root[data-theme="dark"], but dropped the @media (prefers-color-scheme:
+ *     dark) trigger that widgets previously carried in their own <style>.
+ *     Inline widgets whose host sends no set-theme / data-theme message therefore
+ *     stayed on the light --surface (#fdfcfc), rendering white in dark mode.
+ *     Re-apply the dark values on OS dark; an explicit host data-theme="light"
+ *     still opts back to light. Keep in sync with the :root[data-theme="dark"]
+ *     block above.
+ * ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --body-bg: #0f0f0f;
+    --lumi-sys-elevation--level1: 0 0 20px 0 rgba(0, 0, 0, 0.28);
+    --lumi-sys-elevation--level2: 0 0 20px 0 rgba(0, 0, 0, 0.40);
+
+    --lumi-sys-color--surface: #0f0f0f;
+    --lumi-sys-color--surface-dim: #141414;
+    --lumi-sys-color--surface-bright: #1c1c1c;
+    --lumi-sys-color--surface-background: #0f0f0f;
+    --lumi-sys-color--surface-accent: #14204f;
+    --lumi-sys-color--surface-container: #141414;
+    --lumi-sys-color--surface-container-high: #1c1c1c;
+    --lumi-sys-color--surface-translucent: rgba(24, 24, 27, 0.88);
+    --lumi-sys-color--on-surface: #e0e0e0;
+    --lumi-sys-color--on-surface-default: #e0e0e0;
+    --lumi-sys-color--on-surface-variant: rgba(255, 255, 255, 0.55);
+    --lumi-sys-color--on-surface-de-emphasis: rgba(255, 255, 255, 0.55);
+    --lumi-sys-color--on-surface-low: rgba(255, 255, 255, 0.12);
+    --lumi-sys-color--positive: #0ebc5f;
+    --lumi-sys-color--positive-container: #002220;
+    --lumi-sys-color--on-positive-container: #0ebc5f;
+    --lumi-sys-color--error: #ff4c45;
+    --lumi-sys-color--error-container: #3c0202;
+    --lumi-sys-color--on-error-container: #ff4c45;
+    --lumi-sys-color--accent: #1f3b9b;
+    --lumi-sys-color--accent-container: #192967;
+    --lumi-sys-color--accent-fixed: #3186ff;
+    --lumi-sys-color--primary: #9dd2ff;
+    --lumi-sys-color--on-primary: #192967;
+    --lumi-sys-color--black: #000000;
+    --lumi-sys-color--white: #ffffff;
+    --lumi-sys-color--outline: #9a9b9c;
+    --lumi-sys-color--stroke-default: #2d2f38;
+
+    --lumi-sys-color--code-background: #141414;
+    --lumi-sys-color--code-primary-text: #ffffff;
+    --lumi-sys-color--code-blue-text: #4fa0ff;
+    --lumi-sys-color--code-green-text: #60d673;
+    --lumi-sys-color--code-grey-text: #808080;
+    --lumi-sys-color--code-pink-text: #ff96da;
+    --lumi-sys-color--code-purple-text: #969dff;
+    --lumi-sys-color--code-red-text: #ff5a59;
+    --lumi-sys-color--code-yellow-text: #ffdb0f;
+
+    --lumi-sys-color--chart-series-1: #9dd2ff;
+    --lumi-sys-color--chart-series-2: #96a7d6;
+    --lumi-sys-color--chart-series-3: #50e389;
+    --lumi-sys-color--chart-series-4: #c8f585;
+    --lumi-sys-color--chart-series-5: #f5f2e6;
+    --lumi-sys-color--chart-series-6: #dcd8c0;
+    --lumi-sys-color--chart-series-7: #82c7ff;
+    --lumi-sys-color--chart-series-8: #f5d77f;
+    --lumi-sys-color--chart-series-9: #d9ceff;
+    --lumi-sys-color--chart-series-10: #ffa6d7;
+  }
+}
+
+/* ============================================================
+ * 4. SHORT DIAGRAM / CHART ALIASES
+ *    Legacy diagram.md and chart.jinja2 reference short names such as
+ *    --surface, --on-surface, --chart-1..10, --primary, --r-full. These MUST
+ *    resolve to the canonical --lumi-sys-color--* tokens (which flip in dark
+ *    mode) — otherwise every diagram var() falls back to black (historical
+ *    mass-regression bug #4). Light-hex fallbacks are a last resort only.
+ * ============================================================ */
+:root {
+  /* surfaces */
+  --surface: var(--lumi-sys-color--surface, #fdfcfc);
+  --surface-dim: var(--lumi-sys-color--surface-dim, #f2f0f0);
+  --surface-bright: var(--lumi-sys-color--surface-bright, #ffffff);
+  --surface-container: var(--lumi-sys-color--surface-container, #f2f0f0);
+  --surface-container-high: var(--lumi-sys-color--surface-container-high, #e6e6e6);
+  --surface-container-lowest: var(--lumi-sys-color--surface, #ffffff);
+  --surface-accent: var(--lumi-sys-color--surface-accent, #9dd2ff);
+  --surface-translucent: var(--lumi-sys-color--surface-translucent, rgba(255, 255, 255, 0.88));
+  --surface-glass: var(--lumi-sys-color--surface-translucent, rgba(255, 255, 255, 0.88));
+  /* foreground */
+  --on-surface: var(--lumi-sys-color--on-surface, #000000);
+  --on-surface-variant: var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55));
+  --on-surface-low: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08));
+  /* accents / brand */
+  --primary: var(--lumi-sys-color--primary, #3186ff);
+  --primary-container: var(--lumi-sys-color--accent-container, #dcf1ff);
+  --accent: var(--lumi-sys-color--accent, #9dd2ff);
+  --accent-container: var(--lumi-sys-color--accent-container, #dcf1ff);
+  --accent-fixed: var(--lumi-sys-color--accent-fixed, #3186ff);
+  /* status */
+  --positive: var(--lumi-sys-color--positive, #008052);
+  --positive-container: var(--lumi-sys-color--positive-container, #daf9d4);
+  --error: var(--lumi-sys-color--error, #de2d29);
+  --error-container: var(--lumi-sys-color--error-container, #ffdeec);
+  /* structure */
+  --outline: var(--lumi-sys-color--outline, #727676);
+  --stroke-default: var(--lumi-sys-color--stroke-default, #e3e3e3);
+  /* chart series 1..10 */
+  --chart-1: var(--lumi-sys-color--chart-series-1, #2575fc);
+  --chart-2: var(--lumi-sys-color--chart-series-2, #5b6e9e);
+  --chart-3: var(--lumi-sys-color--chart-series-3, #228a49);
+  --chart-4: var(--lumi-sys-color--chart-series-4, #62991b);
+  --chart-5: var(--lumi-sys-color--chart-series-5, #1e564d);
+  --chart-6: var(--lumi-sys-color--chart-series-6, #526a45);
+  --chart-7: var(--lumi-sys-color--chart-series-7, #2780c4);
+  --chart-8: var(--lumi-sys-color--chart-series-8, #997112);
+  --chart-9: var(--lumi-sys-color--chart-series-9, #705ec2);
+  --chart-10: var(--lumi-sys-color--chart-series-10, #c84288);
+  /* code palette */
+  --code-background: var(--lumi-sys-color--code-background, #000000);
+  --code-primary-text: var(--lumi-sys-color--code-primary-text, #ffffff);
+  /* spacing shorthands */
+  --spacing-xs: var(--lumi-sys-spacing--xs, 4px);
+  --spacing-s: var(--lumi-sys-spacing--s, 8px);
+  --spacing-m: var(--lumi-sys-spacing--m, 12px);
+  --spacing-l: var(--lumi-sys-spacing--l, 16px);
+  --spacing-xl: var(--lumi-sys-spacing--xl, 20px);
+  /* radius shorthands */
+  --r-s: var(--lumi-sys-shape--small, 8px);
+  --r-m: var(--lumi-sys-shape--medium, 12px);
+  --r-l: var(--lumi-sys-shape--large, 16px);
+  --r-full: var(--lumi-sys-shape--full, 999px);
+}
+
+/* ============================================================
+ * 5. IN-SCOPE PRE-BAKED COMPONENT CLASSES
+ *    Interactive controls + simple display components only (Decision D5).
+ *    Complex components (timeline, sequence, stepper, pros-cons, hero, HUD,
+ *    hotspot, media grid) are intentionally excluded.
+ * ============================================================ */
+
+/* Global font rendering quality + themed surface backdrop.
+ * background/color MUST be set here (SSoT) so the widget backdrop follows the
+ * light/dark surface token deterministically. Without this, a widget whose
+ * model-generated markup forgets `background: var(--surface)` on its root
+ * container falls back to the browser-default white body, producing a broken
+ * dark mode (light header/chart area behind a dark card). Regression source:
+ * batch1 PB-A02 dark. */
+html, body {
+  background: var(--body-bg, transparent) !important;
+  color: var(--on-surface) !important;
+  /* Auto-resizing iframe: content grows the frame, never scrolls the document.
+   * Model widgets already emit this; declared here as the SSoT default. */
+  overflow-y: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+.widget-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-inline: 0 !important;
+  box-sizing: border-box;
+}
+
+/* ============================================================
+ * SCROLLBAR DISCIPLINE (single source of truth)
+ *   Long lists/cards flow and let the iframe auto-resize (see the C++
+ *   NeutralizeInnerScroll pass, which removes accidental tiny scroll boxes).
+ *   For LEGITIMATE overflow that remains (wide tables, code, pan-containers,
+ *   large >=240px viewports) render a slim, theme-aware scrollbar.
+ *   One token carries the correct light/dark contrast (the auto-flipped
+ *   stroke token is too dark on #0f0f0f), referenced once = SSoT.
+ * ============================================================ */
+:root { --lumi-scrollbar-thumb: rgba(0, 0, 0, 0.20); }
+:root[data-theme="dark"], body.dark-mode { --lumi-scrollbar-thumb: rgba(255, 255, 255, 0.20); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --lumi-scrollbar-thumb: rgba(255, 255, 255, 0.20); }
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--lumi-scrollbar-thumb) transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: var(--lumi-scrollbar-thumb);
+  border-radius: var(--lumi-sys-shape--full, 999px);
+}
+
+/* --- Buttons --- */
+/* Universal button fallback (element specificity 0,0,1) — beats `* { padding: 0 }`
+   author resets (0,0,0) while still yielding to any author class selector (0,1,0). */
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lumi-sys-spacing--xs, 6px);
+  min-height: 36px;
+  padding: 6px 16px;
+  font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--on-surface, #000000);
+  background-color: var(--surface-bright, #ffffff);
+  border: 1px solid var(--stroke-default, #e3e3e3);
+  border-radius: var(--lumi-sys-shape--full, 999px);
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+button:hover {
+  background-color: var(--surface-container-high, #e6e6e6);
+}
+button.active, button.is-active, button.selected, button.is-selected, button[aria-pressed="true"], button[aria-selected="true"] {
+  background-color: var(--accent-container, #dcf1ff);
+  color: var(--accent-fixed, #3186ff);
+  border-color: transparent;
+}
+
+.lumi-btn, [class^="lumi-btn-"], [class*=" lumi-btn-"] { display: inline-flex; align-items: center; justify-content: center; gap: var(--lumi-sys-spacing--s, 8px); min-height: 40px; padding: 0px 20px; font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 14px; font-weight: 500; line-height: 20px; border-radius: var(--lumi-sys-shape--full, 999px); border: 1px solid var(--lumi-sys-color--stroke-default, #e3e3e3); cursor: pointer; user-select: none; transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s; text-decoration: none; box-sizing: border-box; white-space: nowrap; }
+.lumi-btn:active, .lumi-btn.is-pressed, [class^="lumi-btn-"]:active, [class*=" lumi-btn-"]:active { transform: scale(0.98); }
+.lumi-btn--tonal, .lumi-btn-tonal, .lumi-btn--secondary, .lumi-btn-secondary, [class^="lumi-btn-"], [class*=" lumi-btn-"] { background-color: var(--lumi-sys-color--surface-bright, #ffffff); color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-btn--tonal:hover, .lumi-btn-tonal:hover, .lumi-btn--secondary:hover, .lumi-btn-secondary:hover, [class^="lumi-btn-"]:hover, [class*=" lumi-btn-"]:hover { background-color: var(--lumi-sys-color--surface-container-high, #e6e6e6); }
+.lumi-btn--accent, .lumi-btn-accent, .lumi-btn--primary, .lumi-btn-primary { background-color: var(--lumi-sys-color--accent, #9dd2ff); color: var(--lumi-sys-color--on-surface-default, #000000); border-color: transparent; }
+.lumi-btn--accent:hover, .lumi-btn-accent:hover, .lumi-btn--primary:hover, .lumi-btn-primary:hover { background-color: var(--lumi-sys-color--accent-container, #dcf1ff); }
+.lumi-btn--bright, .lumi-btn-bright { background-color: var(--lumi-sys-color--surface-bright, #ffffff); color: var(--lumi-sys-color--on-surface-default, #000000); border-color: var(--lumi-sys-color--stroke-default, #e3e3e3); box-shadow: none; }
+.lumi-btn--bright:hover, .lumi-btn-bright:hover { background-color: var(--lumi-sys-color--surface-container-high, #e6e6e6); }
+.lumi-btn--ghost, .lumi-btn-ghost, .lumi-btn--on-surface { background-color: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.04)); color: var(--lumi-sys-color--on-surface-default, #000000); border-color: transparent; }
+.lumi-btn--ghost:hover, .lumi-btn-ghost:hover, .lumi-btn--on-surface:hover { background-color: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-btn--translucent { background-color: rgba(255, 255, 255, 0.25); backdrop-filter: blur(12px); color: var(--lumi-sys-color--on-surface-default, #000000); border-color: rgba(255, 255, 255, 0.3); }
+.lumi-btn--translucent:hover { background-color: rgba(255, 255, 255, 0.35); }
+.lumi-btn--small, .lumi-btn-small { min-height: 36px; padding: 0px 16px; font-size: 13px; line-height: 18px; gap: var(--lumi-sys-spacing--xs, 4px); }
+.lumi-btn--xsmall, .lumi-btn-xsmall { min-height: 24px; padding: 0px 10px; font-size: 11px; line-height: 16px; gap: 4px; }
+.lumi-btn:disabled, .lumi-btn.is-disabled, [class^="lumi-btn-"]:disabled, [class*=" lumi-btn-"]:disabled { opacity: var(--lumi-sys-opacity-state--disabled, 0.38); cursor: not-allowed; pointer-events: none; }
+.lumi-btn.is-selected, .lumi-btn.selected, .lumi-btn.is-active, .lumi-btn.active, .lumi-btn[aria-pressed="true"], .lumi-btn[aria-selected="true"] { background-color: var(--lumi-sys-color--accent-container, #dcf1ff); color: var(--lumi-sys-color--on-surface-default, #000000); border-color: transparent; }
+.lumi-btn.is-selected:hover, .lumi-btn.selected:hover, .lumi-btn.is-active:hover, .lumi-btn.active:hover, .lumi-btn[aria-pressed="true"]:hover, .lumi-btn[aria-selected="true"]:hover { background-color: var(--lumi-sys-color--accent, #9dd2ff); }
+
+/* --- Switch --- */
+.lumi-switch { display: inline-flex; align-items: center; gap: var(--lumi-sys-spacing--s, 8px); cursor: pointer; font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 15px; color: var(--lumi-sys-color--on-surface-default, #000000); user-select: none; }
+.lumi-switch input[type="checkbox"] { position: absolute; opacity: 0; width: 0px; height: 0px; pointer-events: none; }
+.lumi-switch__track { position: relative; display: inline-flex; align-items: center; width: 52px; height: 32px; background-color: var(--lumi-sys-color--surface-dim, #f2f0f0); border: 2px solid var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)); border-radius: var(--lumi-sys-shape--full, 999px); transition: background-color 0.2s, border-color 0.2s; flex-shrink: 0; box-sizing: border-box; }
+.lumi-switch__thumb, .lumi-switch__track::after { content: ""; position: absolute; top: 50%; left: 6px; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%; background-color: var(--lumi-sys-color--on-surface-variant, #757575); transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+.lumi-switch input[type="checkbox"]:checked + .lumi-switch__track { background-color: var(--lumi-sys-color--accent-fixed, #3186ff); border-color: transparent; }
+.lumi-switch input[type="checkbox"]:checked + .lumi-switch__track .lumi-switch__thumb, .lumi-switch input[type="checkbox"]:checked + .lumi-switch__track::after { left: 22px; width: 24px; height: 24px; background-color: rgb(255, 255, 255); }
+.lumi-switch input[type="checkbox"]:disabled + .lumi-switch__track { opacity: var(--lumi-sys-opacity-state--disabled, 0.38); cursor: not-allowed; }
+.lumi-switch--small .lumi-switch__track, .lumi-switch--mini .lumi-switch__track { width: 32px; height: 20px; }
+.lumi-switch--small .lumi-switch__thumb, .lumi-switch--small .lumi-switch__track::after, .lumi-switch--mini .lumi-switch__thumb, .lumi-switch--mini .lumi-switch__track::after { width: 12px; height: 12px; left: 2px; }
+.lumi-switch--small input[type="checkbox"]:checked + .lumi-switch__track .lumi-switch__thumb, .lumi-switch--small input[type="checkbox"]:checked + .lumi-switch__track::after, .lumi-switch--mini input[type="checkbox"]:checked + .lumi-switch__track .lumi-switch__thumb, .lumi-switch--mini input[type="checkbox"]:checked + .lumi-switch__track::after { left: 12px; width: 16px; height: 16px; }
+
+/* --- Checkbox --- */
+.lumi-checkbox-label { display: inline-flex; align-items: center; gap: var(--lumi-sys-spacing--s, 8px); cursor: pointer; font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 15px; color: var(--lumi-sys-color--on-surface-default, #000000); user-select: none; }
+.lumi-checkbox-label input[type="checkbox"] { position: absolute; opacity: 0; width: 0px; height: 0px; pointer-events: none; }
+.lumi-checkbox { position: relative; width: 24px; height: 24px; border-radius: var(--lumi-sys-shape--small, 8px); border: 2px solid var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55)); background-color: transparent; transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-sizing: border-box; }
+.lumi-checkbox-label:hover .lumi-checkbox { background-color: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.04)); border-color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-checkbox-label input[type="checkbox"]:checked ~ .lumi-checkbox, .lumi-checkbox-label input[type="checkbox"]:indeterminate ~ .lumi-checkbox, .lumi-checkbox.is-indeterminate { background-color: var(--lumi-sys-color--on-surface-default, #000000); border-color: transparent; }
+.lumi-checkbox .lumi-checkmark { font-size: 18px; line-height: 1; color: var(--lumi-sys-color--surface, #ffffff); fill: var(--lumi-sys-color--surface, #ffffff); display: none; user-select: none; }
+.lumi-checkbox-label input[type="checkbox"]:checked ~ .lumi-checkbox .lumi-checkmark, .lumi-checkbox-label input[type="checkbox"]:checked ~ .lumi-checkbox .lumi-checkbox__check { display: block; }
+.lumi-checkbox-label input[type="checkbox"]:indeterminate ~ .lumi-checkbox .lumi-checkbox__indeterminate, .lumi-checkbox.is-indeterminate .lumi-checkbox__indeterminate { display: block; }
+.lumi-checkbox-label input[type="checkbox"]:disabled ~ .lumi-checkbox, .lumi-checkbox-label input[type="checkbox"]:disabled ~ span { opacity: var(--lumi-sys-opacity-state--disabled, 0.38); cursor: not-allowed; }
+
+/* --- Slider --- */
+.lumi-slider-container { display: flex; align-items: center; gap: var(--lumi-sys-spacing--m, 16px); width: 100%; }
+.lumi-slider-row { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xs, 4px); width: 100%; }
+.lumi-slider-label { font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 15px; font-weight: 400; color: var(--lumi-sys-color--on-surface-default, #000000); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lumi-slider { appearance: none; width: calc(100% + 28px); margin-left: -14px; margin-right: -14px; height: 40px; background: transparent; cursor: pointer; box-sizing: border-box; }
+.lumi-slider:focus { outline: none; }
+.lumi-slider::-webkit-slider-runnable-track { height: 4px; --thumb-center: calc(14px + (100% - 28px) * (var(--progress, 50%) / 100%)); --active-end: calc(var(--thumb-center) - 8px + (var(--progress, 50%) / 100%) * 6px); background-image: radial-gradient(circle at calc(100% - 18px) center, var(--lumi-sys-color--on-surface-variant, #757575) 2px, transparent 2.5px), linear-gradient( to right, transparent 0, transparent 14px, var(--lumi-sys-color--on-surface-default, #000000) 14px, var(--lumi-sys-color--on-surface-default, #000000) var(--active-end), transparent var(--active-end), transparent calc(var(--thumb-center) + 8px), var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)) calc(var(--thumb-center) + 8px), var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)) calc(100% - 16px), transparent calc(100% - 16px), transparent 100% ); border-radius: var(--lumi-sys-shape--full, 999px); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; }
+.lumi-slider::-webkit-slider-thumb { appearance: none; width: 32px; height: 32px; border-radius: 50%; background-color: transparent; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='14' y='6' width='4' height='20' rx='2' fill='%23000000'/%3E%3C/svg%3E"); background-size: 32px 32px; background-repeat: no-repeat; background-position: center center; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; box-sizing: border-box; margin-top: -14px; cursor: pointer; transition: background-color 0.15s; }
+.lumi-slider:hover::-webkit-slider-thumb { background-color: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-slider:active::-webkit-slider-thumb { background-color: var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.12)); }
+.lumi-slider:disabled { opacity: var(--lumi-sys-opacity-state--disabled, 0.38); cursor: not-allowed; }
+.lumi-slider:disabled::-webkit-slider-thumb { cursor: not-allowed; box-shadow: none; }
+.lumi-slider-value { display: flex; align-items: center; justify-content: center; min-width: 64px; height: 40px; padding: 0px 12px; background-color: var(--lumi-sys-color--surface-dim, #f2f0f0); border-radius: var(--lumi-sys-shape--medium, 16px); font-family: var(--ff-mono, 'Google Sans Code', 'Google Sans Mono', monospace); font-size: 15px; font-weight: 400; color: var(--lumi-sys-color--on-surface-default, #000000); flex-shrink: 0; box-sizing: border-box; }
+
+/* --- Text input --- */
+.lumi-input-group { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xs, 4px); width: 100%; }
+.lumi-input-label { font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 14px; font-weight: 500; line-height: 20px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-input { appearance: none; width: 100%; min-height: 48px; padding: 0px 16px; font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 15px; font-weight: 400; line-height: 22px; color: var(--lumi-sys-color--on-surface-default, #000000); background-color: var(--lumi-sys-color--surface-bright, #ffffff); border: 1px solid var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)); border-radius: var(--lumi-sys-shape--large, 16px); background-clip: padding-box; outline: none; box-sizing: border-box; transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s; }
+.lumi-input::placeholder { color: var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55)); opacity: 0.7; }
+.lumi-input:hover { border-color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-input:focus, .lumi-input:focus-visible { border-color: var(--lumi-sys-color--accent-fixed, #3186ff); box-shadow: 0 0 0 2px var(--lumi-sys-color--accent-container, rgba(49, 134, 255, 0.25)); }
+textarea.lumi-input, .lumi-input--area { min-height: 100px; padding: 12px 16px; resize: vertical; line-height: 22px; }
+.lumi-input.is-error, .lumi-input-group.is-error .lumi-input { border-color: var(--lumi-sys-color--error, #ff4c45); }
+.lumi-input-helper { font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif); font-size: 12px; line-height: 16px; color: var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55)); }
+.lumi-input-group.is-error .lumi-input-helper, .lumi-input-helper--error { color: var(--lumi-sys-color--error, #ff4c45); }
+.lumi-input:disabled, .lumi-input.is-disabled { opacity: var(--lumi-sys-opacity-state--disabled, 0.38); background-color: var(--lumi-sys-color--surface-dim, #f2f0f0); cursor: not-allowed; }
+
+/* --- Focus ring --- */
+:focus-visible { outline: 2px solid var(--lumi-sys-color--on-surface-default, #000000) !important; outline-offset: 2px !important; box-shadow: none !important; }
+.lumi-btn:focus-visible, .lumi-switch input[type="checkbox"]:focus-visible + .lumi-switch__track, .lumi-checkbox-label input[type="checkbox"]:focus-visible ~ .lumi-checkbox, .lumi-slider:focus-visible::-webkit-slider-thumb, .lumi-input:focus-visible { outline: 2px solid var(--lumi-sys-color--on-surface-default, #000000); outline-offset: 2px; box-shadow: none; }
+
+/* --- Typography: Display / Headline / Body / Label --- */
+.lumi-display-l { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 42px; line-height: 48px; font-weight: 280; font-variation-settings: "wght" 280, "wdth" 100, "opsz" 42, "ROND" 100; }
+.lumi-display-l-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 42px; line-height: 48px; font-weight: 450; font-variation-settings: "wght" 450, "wdth" 100, "opsz" 42, "ROND" 100; }
+.lumi-display-m { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 36px; line-height: 44px; font-weight: 320; font-variation-settings: "wght" 320, "wdth" 100, "opsz" 36, "ROND" 100; }
+.lumi-display-m-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 36px; line-height: 44px; font-weight: 480; font-variation-settings: "wght" 480, "wdth" 100, "opsz" 36, "ROND" 100; }
+.lumi-display-s { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 32px; line-height: 38px; font-weight: 360; font-variation-settings: "wght" 360, "wdth" 100, "opsz" 32, "ROND" 100; }
+.lumi-display-s-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 32px; line-height: 38px; font-weight: 500; font-variation-settings: "wght" 500, "wdth" 100, "opsz" 32, "ROND" 100; }
+.lumi-headline-l { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 28px; line-height: 36px; font-weight: 350; font-variation-settings: "wght" 350, "wdth" 100, "opsz" 28, "ROND" 20; }
+.lumi-headline-l-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 28px; line-height: 36px; font-weight: 520; font-variation-settings: "wght" 520, "wdth" 100, "opsz" 28, "ROND" 20; }
+.lumi-headline-m { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 24px; line-height: 28px; font-weight: 380; font-variation-settings: "wght" 380, "wdth" 100, "opsz" 24, "ROND" 20; }
+.lumi-headline-m-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 24px; line-height: 28px; font-weight: 540; font-variation-settings: "wght" 540, "wdth" 100, "opsz" 24, "ROND" 20; }
+.lumi-headline-s { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 20px; line-height: 24px; font-weight: 470; font-variation-settings: "wght" 470, "wdth" 94, "opsz" 20, "ROND" 20; }
+.lumi-headline-s-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 20px; line-height: 24px; font-weight: 580; font-variation-settings: "wght" 580, "wdth" 94, "opsz" 20, "ROND" 20; }
+.lumi-body-l { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 17; }
+.lumi-body-l-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 540; font-variation-settings: "wght" 540, "wdth" 92, "opsz" 17; font-variant-numeric: tabular-nums; }
+.lumi-body-m { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; line-height: 20px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 15; }
+.lumi-body-m-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; line-height: 20px; font-weight: 540; font-variation-settings: "wght" 540, "wdth" 92, "opsz" 15; font-variant-numeric: tabular-nums; }
+.lumi-body-s { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; line-height: 17px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 13; }
+.lumi-body-s-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; line-height: 17px; font-weight: 540; font-variation-settings: "wght" 540, "wdth" 92, "opsz" 13; font-variant-numeric: tabular-nums; }
+.lumi-label-l { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 370; font-variation-settings: "wght" 370, "wdth" 92, "opsz" 17; }
+.lumi-label-l-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 510; font-variation-settings: "wght" 510, "wdth" 92, "opsz" 17; }
+.lumi-label-m { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; line-height: 20px; font-weight: 370; font-variation-settings: "wght" 370, "wdth" 92, "opsz" 15; }
+.lumi-label-m-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; line-height: 20px; font-weight: 510; font-variation-settings: "wght" 510, "wdth" 92, "opsz" 15; }
+.lumi-label-s { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; line-height: 20px; font-weight: 370; font-variation-settings: "wght" 370, "wdth" 92, "opsz" 13; }
+.lumi-label-s-emphasized { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; line-height: 20px; font-weight: 510; font-variation-settings: "wght" 510, "wdth" 92, "opsz" 13; }
+
+/* --- Typography: Monospace / Extended (Google Sans Code) --- */
+.lumi-blockquote { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-style: italic; font-size: 22px; line-height: 30px; font-weight: 300; font-variation-settings: "wght" 300, "opsz" 22, "MONO" 0; }
+.lumi-takeaway { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-style: italic; font-size: 17px; line-height: 24px; font-weight: 400; font-variation-settings: "wght" 400, "opsz" 17, "MONO" 0; }
+.lumi-caption { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-style: italic; font-size: 13px; line-height: 20px; font-weight: 400; font-variation-settings: "wght" 400, "opsz" 13, "MONO" 0; }
+.lumi-code { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-size: 15px; line-height: 20px; font-weight: 400; font-variation-settings: "wght" 400, "MONO" 1; }
+.lumi-bullet { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-size: 15px; line-height: 24px; font-weight: 650; font-variation-settings: "wght" 650, "MONO" 1; }
+
+/* --- Cards & attribution --- */
+.lumi-summary-card { padding: var(--lumi-sys-spacing--l, 16px); background-color: var(--lumi-sys-color--surface-container, #f2f0f0); border-radius: var(--lumi-sys-shape--medium, 12px); color: var(--lumi-sys-color--on-surface-default, #000000); font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; line-height: 20px; box-sizing: border-box; }
+.lumi-link-card { display: flex; align-items: center; justify-content: space-between; padding: var(--lumi-sys-spacing--l, 16px); background-color: var(--lumi-sys-color--surface-container, #f2f0f0); border-radius: var(--lumi-sys-shape--medium, 12px); text-decoration: none; color: var(--lumi-sys-color--on-surface-default, #000000); transition: background-color 0.15s; box-sizing: border-box; }
+.lumi-link-card:hover { background-color: var(--lumi-sys-color--surface-container-high, #e6e6e6); }
+.lumi-attribution-buffer { margin-top: var(--lumi-sys-spacing--xxl, 24px); font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; color: var(--lumi-sys-color--on-surface-de-emphasis, rgba(0, 0, 0, 0.55)); }
+.lumi-card { background-color: var(--lumi-sys-color--surface-dim, #f2f0f0); border-radius: var(--lumi-sys-shape--large-max, 24px); padding: var(--lumi-sys-spacing--3xl, 28px); display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--s, 8px); width: 100%; box-sizing: border-box; }
+.lumi-card-title { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 20px; font-weight: 500; font-variation-settings: "wght" 470, "wdth" 94, "opsz" 20; color: var(--lumi-sys-color--on-surface, #000000); margin: 0px; }
+.lumi-card-subtitle { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 13px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 13; color: var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55)); margin: 0px; }
+.lumi-card-body { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 15; color: var(--lumi-sys-color--on-surface, #000000); margin: var(--lumi-sys-spacing--xs, 4px) 0 0 0; }
+.lumi-overlay-card { background-color: var(--surface-translucent, rgba(255, 255, 255, 0.88)); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--stroke-default); border-radius: var(--lumi-sys-shape--medium, 12px); padding: var(--lumi-sys-spacing--m, 12px) var(--lumi-sys-spacing--l, 16px); color: var(--on-surface); box-shadow: var(--lumi-sys-elevation--level1); box-sizing: border-box; }
+
+/* --- Progress bar --- */
+.lumi-progress-tracker { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xs, 4px); width: 100%; }
+.lumi-progress-bar { width: 100%; height: 8px; background-color: var(--lumi-sys-color--stroke-default, #e3e3e3); border-radius: var(--lumi-sys-shape--full, 999px); overflow: hidden; }
+.lumi-progress-fill { height: 100%; background-color: var(--lumi-sys-color--accent-fixed, #3186ff); border-radius: var(--lumi-sys-shape--full, 999px); transition: width 0.3s; }
+
+/* --- Accordion (card group variant) --- */
+.lumi-accordion-group { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--s, 8px); }
+.lumi-accordion-group .lumi-accordion-item { background-color: var(--lumi-sys-color--surface-container, #f2f0f0); border-radius: var(--lumi-sys-shape--medium, 12px); overflow: hidden; transition: background-color 0.15s; }
+.lumi-accordion-group .lumi-accordion-header { padding: var(--lumi-sys-spacing--l, 16px); font-family: var(--ff-sans, sans-serif); font-size: 15px; font-weight: 540; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-accordion-group .lumi-accordion-chevron { transition: transform 0.2s; font-size: 12px; }
+.lumi-accordion-group .lumi-accordion-item.active .lumi-accordion-chevron { transform: rotate(180deg); }
+.lumi-accordion-group .lumi-accordion-body { display: none; padding: 0 var(--lumi-sys-spacing--l, 16px) var(--lumi-sys-spacing--l, 16px) var(--lumi-sys-spacing--l, 16px); font-family: var(--ff-sans, sans-serif); font-size: 15px; color: var(--lumi-sys-color--on-surface-de-emphasis, rgba(0, 0, 0, 0.55)); line-height: 20px; }
+.lumi-accordion-group .lumi-accordion-item.active .lumi-accordion-body { display: block; }
+
+/* --- Accordion (borderless list variant) --- */
+.lumi-accordion { display: flex; flex-direction: column; width: 100%; border-top: 1px solid var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-accordion-item { display: flex; flex-direction: column; width: 100%; background: transparent; border-radius: 0px; border-bottom: 1px solid var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-accordion-header { display: flex; justify-content: space-between; align-items: center; padding: var(--lumi-sys-spacing--xl, 20px) 0; cursor: pointer; user-select: none; }
+.lumi-accordion-title { margin: 0px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-accordion-item.active .lumi-accordion-content { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--l, 16px); }
+.lumi-accordion-content { display: none; padding-bottom: var(--lumi-sys-spacing--xxl, 24px); }
+.lumi-accordion-field { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xxs, 2px); }
+.lumi-accordion-field-label { margin: 0px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-accordion-field-val { margin: 0px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+
+/* --- Segmented control --- */
+.lumi-segmented-group { display: flex; background-color: var(--lumi-sys-color--surface-container, #f2f0f0); padding: 4px; border-radius: var(--lumi-sys-shape--full, 999px); gap: 4px; }
+.lumi-segmented-btn { flex: 1 1 0%; padding: 8px 16px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: var(--lumi-sys-shape--full, 999px); background-color: transparent; font-family: var(--ff-sans, sans-serif); font-size: 14px; font-weight: 510; cursor: pointer; color: var(--lumi-sys-color--on-surface-de-emphasis, rgba(0, 0, 0, 0.55)); transition: 0.2s; }
+.lumi-segmented-btn.is-active { background-color: var(--lumi-sys-color--surface-bright, #ffffff); color: var(--lumi-sys-color--on-surface-default, #000000); box-shadow: var(--lumi-sys-elevation--level1); }
+
+/* --- Tabs --- */
+.lumi-tab-group { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--4xl, 36px); width: 100%; }
+.lumi-tab-bar { display: flex; gap: var(--lumi-sys-spacing--l, 16px); padding-bottom: 0px; overflow-x: auto; scrollbar-width: none; }
+.lumi-tab-bar::-webkit-scrollbar { display: none; }
+.lumi-tab { height: 40px; padding: 0 var(--lumi-sys-spacing--xl, 20px); display: flex; align-items: center; justify-content: center; font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 370; font-variation-settings: "wght" 370, "wdth" 92, "opsz" 17; color: var(--lumi-sys-color--on-surface-de-emphasis, rgba(0, 0, 0, 0.55)); background: transparent; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: var(--lumi-sys-shape--full, 999px); cursor: pointer; white-space: nowrap; transition: background-color 0.15s, color 0.15s; }
+.lumi-tab:hover { color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-tab.active { background-color: var(--lumi-sys-color--surface-container-high, #f2f0f0); color: var(--lumi-sys-color--on-surface-default, #000000); font-weight: 510; font-variation-settings: "wght" 510, "wdth" 92, "opsz" 17; }
+.lumi-tab-content { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--m, 12px); padding-top: 0px; padding-bottom: 0px; }
+.lumi-tab-content .lumi-body-l-emphasized, .lumi-tab-content .lumi-headline-s { margin: 0px; }
+.lumi-tab-content .lumi-body-l { margin: 0px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+
+/* --- Callout / pullquote --- */
+.lumi-callout { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xs, 4px); width: 100%; }
+.lumi-callout .lumi-body-l-emphasized { margin: 0px; }
+.lumi-pullquote { display: flex; gap: var(--lumi-sys-spacing--xl, 20px); width: 100%; margin: 0px; }
+.lumi-pullquote-mark { width: 30px; height: 22px; flex-shrink: 0; margin-top: 4px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-pullquote-body { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--l, 16px); flex: 1 1 0%; min-width: 0px; }
+p.lumi-pullquote-text, .lumi-pullquote-text { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-style: italic; font-weight: 300; font-variation-settings: "wght" 300, "opsz" 22, "MONO" 0; color: var(--lumi-sys-color--on-surface-default, #000000); margin: 0px; font-size: 22px !important; line-height: 30px !important; }
+.lumi-pullquote-cite { display: flex; flex-direction: column; font-style: normal; }
+.lumi-pullquote-cite .lumi-de-emphasis { color: var(--lumi-sys-color--on-surface-de-emphasis, rgba(0, 0, 0, 0.55)); }
+
+/* --- Data table (simple) --- */
+.lumi-data-table-container { width: 100%; overflow-x: auto; border-radius: var(--lumi-sys-shape--medium, 12px); border: 1px solid var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)); }
+.lumi-data-table { width: 100%; border-collapse: collapse; font-family: var(--ff-sans, sans-serif); font-size: 14px; text-align: left; }
+.lumi-data-table th { padding: 12px 16px; font-weight: 600; background-color: var(--lumi-sys-color--surface-container, #f2f0f0); border-bottom: 1px solid var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)); color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-data-table td { padding: 12px 16px; border-bottom: 1px solid var(--lumi-sys-color--stroke-default, rgba(0, 0, 0, 0.12)); color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-data-table tr:last-child td { border-bottom-width: medium; border-bottom-style: none; border-bottom-color: currentcolor; }
+
+/* --- Table widget (prose-style) --- */
+.lumi-table-widget { display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--xxl, 24px); width: 100%; }
+.lumi-table-title { margin: 0px; color: var(--lumi-sys-color--on-surface-default, #000000); }
+.lumi-table { width: 100%; border-collapse: collapse; font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); text-align: left; }
+.lumi-table th { padding: 12px 16px 12px 0px; font-size: 17px; line-height: 24px; font-weight: 540; font-variation-settings: "wght" 540, "wdth" 92, "opsz" 17; color: var(--lumi-sys-color--on-surface-default, #000000); border-bottom: 1px solid var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-table td { padding: 16px 16px 16px 0px; font-size: 17px; line-height: 24px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 17; color: var(--lumi-sys-color--on-surface-default, #000000); border-bottom: 1px solid var(--lumi-sys-color--on-surface-low, rgba(0, 0, 0, 0.08)); }
+.lumi-table td:last-child, .lumi-table th:last-child { padding-right: 0px; }
+.lumi-table tr.lumi-table-ellipsis-row td { padding: 16px 0px 0px; border-bottom-width: medium; border-bottom-style: none; border-bottom-color: currentcolor; color: var(--lumi-sys-color--on-surface-variant, rgba(0, 0, 0, 0.55)); }
+
+/* --- Code block --- */
+.lumi-code-block { background-color: var(--lumi-sys-color--code-background, #000000); border-radius: var(--lumi-sys-shape--xl-max, 40px); padding: 32px; display: flex; flex-direction: column; gap: var(--lumi-sys-spacing--l, 16px); width: 100%; box-sizing: border-box; }
+.lumi-code-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.lumi-code-lang { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 15px; font-weight: 500; font-variation-settings: "wght" 540, "wdth" 92, "opsz" 15; color: var(--lumi-sys-color--code-primary-text, #ffffff); }
+.lumi-code-copy { background: transparent; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; color: var(--lumi-sys-color--code-primary-text, #ffffff); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: var(--lumi-sys-shape--full, 999px); transition: background-color 0.2s; }
+.lumi-code-copy:hover { background-color: rgba(255, 255, 255, 0.1); }
+.lumi-code-snippet { margin: 0px; overflow-x: auto; width: 100%; }
+.lumi-code-snippet code { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-size: 15px; line-height: 20px; color: var(--lumi-sys-color--code-primary-text, #ffffff); display: block; white-space: pre; }
+
+/* --- Section / prose --- */
+.lumi-section { display: flex; flex-direction: column; align-items: flex-start; width: 100%; }
+.lumi-section h1 { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 28px; line-height: 36px; font-weight: 350; font-variation-settings: "wght" 350, "wdth" 100, "opsz" 28; color: var(--lumi-sys-color--on-surface, #000000); margin-top: var(--lumi-sys-spacing--m, 12px); margin-bottom: var(--lumi-sys-spacing--xxl, 24px); }
+.lumi-section h1:first-child { margin-top: 0px; }
+.lumi-section h2 { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 24px; line-height: 28px; font-weight: 380; font-variation-settings: "wght" 380, "wdth" 100, "opsz" 24; color: var(--lumi-sys-color--on-surface, #000000); margin-top: var(--lumi-sys-spacing--m, 12px); margin-bottom: var(--lumi-sys-spacing--m, 12px); }
+.lumi-section h2:first-child { margin-top: 0px; }
+.lumi-section h3 { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 20px; line-height: 24px; font-weight: 470; font-variation-settings: "wght" 470, "wdth" 94, "opsz" 20; color: var(--lumi-sys-color--on-surface, #000000); margin-top: var(--lumi-sys-spacing--m, 12px); margin-bottom: var(--lumi-sys-spacing--xs, 4px); }
+.lumi-section h3:first-child { margin-top: 0px; }
+.lumi-section p { font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 17; color: var(--lumi-sys-color--on-surface, #000000); margin-top: 0px; margin-bottom: var(--lumi-sys-spacing--m, 12px); }
+.lumi-section p:last-child { margin-bottom: 0px; }
+.lumi-section ul { list-style: none; padding: 0px; margin: 0 0 var(--lumi-sys-spacing--m, 12px) 0; width: 100%; }
+.lumi-section ul:last-child { margin-bottom: 0px; }
+.lumi-section li { position: relative; padding-left: 40px; padding-bottom: 12px; font-family: var(--ff-sans, 'Google Sans Flex', sans-serif); font-size: 17px; line-height: 24px; font-weight: 400; font-variation-settings: "wght" 400, "wdth" 92, "opsz" 17; color: var(--lumi-sys-color--on-surface, #000000); box-sizing: border-box; }
+.lumi-section li:last-child { padding-bottom: 0px; }
+.lumi-section li::before { content: "○"; position: absolute; left: 3.5px; top: 0px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-family: var(--ff-mono, 'Google Sans Code', monospace); font-size: 15px; font-weight: 650; font-variation-settings: "MONO" 1, "wght" 650; color: var(--lumi-sys-color--on-surface, #000000); }
+.lumi-section li ul { margin-top: 12px; margin-bottom: 0px; padding-left: 40px; }
+
+/* --- Chart legend (1:1 series color match) --- */
+.lumi-chart-header, .lumi-chart-title { margin-bottom: 32px; }
+.lumi-chart-legend { display: flex; justify-content: center; align-items: center; gap: 24px; margin-top: 32px; padding-top: 0px; width: 100%; flex-wrap: wrap; }
+.lumi-legend-item { display: inline-flex; align-items: center; gap: 8px; }
+.lumi-legend-dot { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lumi-legend-dot-swatch { width: 20px; height: 20px; border-radius: 50%; display: block; }
+span.lumi-legend-dot[style*="background"] { width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.lumi-legend-label { font-family: var(--ff-mono, 'Google Sans Code', monospace); font-style: italic; font-size: 13px; font-weight: 400; line-height: 20px; color: var(--lumi-sys-color--on-surface, #000000); font-variation-settings: "MONO" 0; white-space: nowrap; }
+
+/* Canonical themed <select>. Uses element+class specificity (select.lumi-select)
+   so it intentionally wins over any model hand-rolled `.lumi-select` rule: the
+   runtime stylesheet is injected before widget <style> blocks, so a bare
+   `.lumi-select` (same specificity, later) would otherwise override it. This
+   provides appearance:none + a theme-neutral chevron so no native OS arrow leaks. */
+select.lumi-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  padding: var(--lumi-sys-spacing--s, 8px) 40px var(--lumi-sys-spacing--s, 8px)
+    var(--lumi-sys-spacing--m, 12px);
+  border: 1px solid var(--stroke-default);
+  border-radius: var(--r-full, 999px);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--ff-sans, 'Google Sans Flex', sans-serif);
+  font-size: 15px;
+  line-height: 20px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2380868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+}
+select.lumi-select:focus-visible {
+  outline: 2px solid var(--lumi-sys-color--accent-fixed, #3186ff);
+  outline-offset: 2px;
+}
+
+/* Toggle / filter chip. Models frequently emit `<button class="lumi-chip">`
+   (or `.lumi-chip-btn`, `.lumi-filter-btn`, `[class^="lumi-chip-"]`, with
+   `.is-active`/`.active`/`.is-selected`) for toggle pills; without a
+   canonical rule these fall back to native (retro) browser button chrome.
+   Theme-aware via runtime tokens so it is correct in light and dark. */
+.lumi-chip,
+[class^="lumi-chip"],
+[class*=" lumi-chip"],
+[class^="lumi-pill"],
+[class*=" lumi-pill"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lumi-sys-spacing--s, 8px);
+  min-height: 32px;
+  padding: 0 16px;
+  font-family: var(--ff-sans, 'Google Sans Flex', 'Google Sans', sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--lumi-sys-color--on-surface-default, #1f1f1f);
+  background: var(--lumi-sys-color--surface-dim, #f2f0f0);
+  border: 1px solid transparent;
+  border-radius: var(--lumi-sys-shape--full, 999px);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.lumi-chip:hover,
+[class^="lumi-chip"]:hover,
+[class*=" lumi-chip"]:hover,
+[class^="lumi-pill"]:hover,
+[class*=" lumi-pill"]:hover {
+  background: var(--lumi-sys-color--surface-container-high, #e6e6e6);
+}
+.lumi-chip.is-active,
+.lumi-chip.active,
+.lumi-chip.is-selected,
+.lumi-chip.selected,
+.lumi-chip[aria-pressed="true"],
+.lumi-chip[aria-selected="true"],
+[class^="lumi-chip"].is-active,
+[class^="lumi-chip"].active,
+[class^="lumi-chip"].is-selected,
+[class^="lumi-chip"].selected,
+[class^="lumi-chip"][aria-pressed="true"],
+[class^="lumi-chip"][aria-selected="true"],
+[class*=" lumi-chip"].is-active,
+[class*=" lumi-chip"].active,
+[class*=" lumi-chip"].is-selected,
+[class*=" lumi-chip"].selected,
+[class^="lumi-pill"].is-active,
+[class^="lumi-pill"].active,
+[class*=" lumi-pill"].is-active,
+[class*=" lumi-pill"].active {
+  color: var(--lumi-sys-color--accent-fixed, #3186ff);
+  background: var(--lumi-sys-color--accent-container, rgba(49, 134, 255, 0.14));
+  border-color: transparent;
+  font-weight: 600;
+}
+.lumi-chip:focus-visible,
+[class^="lumi-chip"]:focus-visible,
+[class*=" lumi-chip"]:focus-visible,
+[class^="lumi-pill"]:focus-visible,
+[class*=" lumi-pill"]:focus-visible {
+  outline: 2px solid var(--lumi-sys-color--accent-fixed, #3186ff);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+ * DIAGRAM GUARD — SVG <text> is fill-only.
+ *   An inherited group stroke (e.g. `.node:hover { stroke }` on a <g>)
+ *   otherwise cascades into child <text>, thickening glyph outlines
+ *   (fake-bold) and recoloring the label. Highlight strokes belong on
+ *   shapes (rect/path); text never paints a stroke.
+ * ============================================================ */
+svg text { stroke: none; paint-order: fill; }
+
+</style>
+<style id="lumi-surface-button-fallbacks">
+.widget-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-inline: 0 !important;
+  box-sizing: border-box;
+}
+:root {
+  --lumi-sys-color--surface-translucent: rgba(255, 255, 255, 0.88);
+  --surface-translucent: var(--lumi-sys-color--surface-translucent, rgba(255, 255, 255, 0.88));
+  --surface-glass: var(--lumi-sys-color--surface-translucent, rgba(255, 255, 255, 0.88));
+}
+:root[data-theme="dark"], body.dark-mode {
+  --lumi-sys-color--surface-translucent: rgba(24, 24, 27, 0.88);
+  --surface-translucent: rgba(24, 24, 27, 0.88);
+  --surface-glass: rgba(24, 24, 27, 0.88);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lumi-sys-color--surface-translucent: rgba(24, 24, 27, 0.88);
+    --surface-translucent: rgba(24, 24, 27, 0.88);
+    --surface-glass: rgba(24, 24, 27, 0.88);
+  }
+}
+button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 18px;
+  font-family: var(--ff-sans, 'Google Sans Flex', sans-serif);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--on-surface, #000000);
+  background-color: var(--lumi-sys-color--surface-bright, #ffffff);
+  border: 1px solid var(--stroke-default, #e3e3e3);
+  border-radius: 999px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+button:hover {
+  background-color: var(--surface-container-high, #e6e6e6);
+}
+button.active, button.is-active, button.selected, button.is-selected, button[aria-pressed="true"], button[aria-selected="true"] {
+  background-color: var(--accent-container, #dcf1ff);
+  color: var(--accent-fixed, #3186ff);
+  border-color: transparent;
+}
+.lumi-btn, [class^="lumi-btn-"], [class*=" lumi-btn-"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 8px 18px;
+  background-color: var(--lumi-sys-color--surface-bright, #ffffff);
+  color: var(--on-surface, #000000);
+  border: 1px solid var(--stroke-default, #e3e3e3);
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+.lumi-btn--primary, .lumi-btn-primary {
+  background-color: var(--lumi-sys-color--accent, #9dd2ff);
+  color: var(--lumi-sys-color--on-surface-default, #000000);
+  border-color: transparent;
+}
+.lumi-btn--primary:hover, .lumi-btn-primary:hover {
+  background-color: var(--lumi-sys-color--accent-container, #dcf1ff);
+}
+:where(.lumi-chip, [class^="lumi-chip"], [class*=" lumi-chip"], [class^="lumi-pill"], [class*=" lumi-pill"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 16px;
+  font-family: var(--ff-sans, 'Google Sans Flex', sans-serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--on-surface, #1f1f1f);
+  background: var(--surface-dim, #f2f0f0);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+:where(.lumi-chip.is-active, .lumi-chip.active, [class^="lumi-chip"].is-active, [class^="lumi-chip"].active, [class*=" lumi-chip"].is-active, [class*=" lumi-chip"].active, [class^="lumi-pill"].is-active, [class^="lumi-pill"].active) {
+  color: var(--accent-fixed, #3186ff);
+  background: var(--accent-container, rgba(49, 134, 255, 0.14));
+  border-color: transparent;
+  font-weight: 600;
+}
+</style>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARES OS v2.6 - Flight Control Telemetry & Health Dashboard</title>
+  <!-- Three.js Library for 360 VR Viewport -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.warn('Three.js failed to load')"></script>
+  <style>
+    /* Widget Specific Custom Glue Code (Luminous Tokens Pre-Injected at Runtime) */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--ff-sans, 'Google Sans Flex', sans-serif);
+      color: var(--on-surface);
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      overflow-x: hidden;
+    }
+
+    .widget-container {
+      width: 100%;
+      min-height: 280px;
+      padding: var(--spacing-m, 12px);
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-m, 12px);
+    }
+
+    /* Header Bar */
+    .ares-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-m, 12px) var(--spacing-l, 16px);
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      border: 1px solid var(--stroke-default);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .ares-title-block {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ares-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      background-color: var(--positive);
+      box-shadow: 0 0 8px var(--positive);
+      transition: background-color 0.3s, box-shadow 0.3s;
+    }
+
+    .status-indicator.elevated {
+      background-color: var(--chart-8);
+      box-shadow: 0 0 8px var(--chart-8);
+    }
+
+    .status-indicator.critical {
+      background-color: var(--error);
+      box-shadow: 0 0 8px var(--error);
+    }
+
+    .ares-subtitle {
+      font-family: var(--ff-mono, 'Google Sans Code', monospace);
+      font-size: 12px;
+      color: var(--on-surface-variant);
+      margin-top: 2px;
+    }
+
+    /* ADI Arc Meter Display */
+    .adi-badge-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-bright);
+      padding: 6px 14px;
+      border-radius: var(--r-full, 999px);
+      border: 1px solid var(--stroke-default);
+    }
+
+    .adi-value-group {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .adi-label {
+      font-family: var(--ff-mono, monospace);
+      font-size: 12px;
+      text-transform: uppercase;
+      color: var(--on-surface-variant);
+    }
+
+    .adi-score {
+      font-family: var(--ff-mono, monospace);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--positive);
+      transition: color 0.3s;
+    }
+
+    /* Grid Layout for Dashboard Modules */
+    .grid-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-m, 12px);
+    }
+
+    @media (max-width: 620px) {
+      .grid-two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Profile Deck */
+    .profile-card {
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      padding: var(--spacing-m, 12px);
+      border: 1px solid var(--stroke-default);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card-heading {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--on-surface-variant);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--stroke-default);
+      padding-bottom: 6px;
+    }
+
+    .editable-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .field-label {
+      font-family: var(--ff-mono, monospace);
+      font-size: 12px;
+      color: var(--on-surface-variant);
+    }
+
+    .field-input {
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+      border-radius: var(--r-s, 8px);
+      color: var(--on-surface);
+      padding: 4px 8px;
+      font-family: var(--ff-sans, sans-serif);
+      font-size: 12px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    .field-input:focus {
+      border-color: var(--primary);
+    }
+
+    /* ECG & Bio Canvas Area */
+    .bio-feed-card {
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      padding: var(--spacing-m, 12px);
+      border: 1px solid var(--stroke-default);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .canvas-viewport {
+      position: relative;
+      width: 100%;
+      height: 120px;
+      border-radius: var(--r-s, 8px);
+      overflow: hidden;
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+    }
+
+    canvas.bio-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    .brainwave-canvas-viewport {
+      position: relative;
+      width: 100%;
+      height: 50px;
+      border-radius: var(--r-s, 8px);
+      overflow: hidden;
+      background: var(--surface-bright);
+      border: 1px solid var(--stroke-default);
+    }
+
+    /* VR & Earth Stream Section */
+    .media-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-m, 12px);
+    }
+
+    @media (max-width: 620px) {
+      .media-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .vr-viewport-wrapper {
+      position: relative;
+      width: 100%;
+      height: 160px;
+      border-radius: var(--r-m, 12px);
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--stroke-default);
+    }
+
+    #vr-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #vr-canvas:active {
+      cursor: grabbing;
+    }
+
+    .vr-controls-overlay {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface-translucent, rgba(0,0,0,0.6));
+      padding: 4px 8px;
+      border-radius: var(--r-s, 8px);
+      backdrop-filter: blur(4px);
+    }
+
+    .vr-scene-selector {
+      display: flex;
+      gap: 4px;
+    }
+
+    .vr-chip {
+      background: var(--surface-container-high);
+      color: var(--on-surface);
+      border: none;
+      padding: 3px 8px;
+      border-radius: var(--r-full, 999px);
+      font-size: 12px;
+      font-family: var(--ff-mono, monospace);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .vr-chip.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Earth Video Wall & Audio Synthesizer */
+    .earth-feed-card {
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      padding: var(--spacing-m, 12px);
+      border: 1px solid var(--stroke-default);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .earth-canvas-viewport {
+      position: relative;
+      width: 100%;
+      height: 110px;
+      border-radius: var(--r-s, 8px);
+      overflow: hidden;
+      background: #050b14;
+      border: 1px solid var(--stroke-default);
+    }
+
+    .media-player-deck {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .audio-synth-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-bright);
+      color: var(--on-surface);
+      border: 1px solid var(--stroke-default);
+      padding: 6px 12px;
+      border-radius: var(--r-full, 999px);
+      font-size: 12px;
+      font-family: var(--ff-mono, monospace);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .audio-synth-btn:hover {
+      background: var(--surface-container-high);
+    }
+
+    .audio-synth-btn.is-playing {
+      background: var(--primary-container);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    /* Sliders Deck */
+    .control-deck {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: var(--spacing-m, 12px);
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      border: 1px solid var(--stroke-default);
+    }
+
+    .slider-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px 16px;
+    }
+
+    @media (max-width: 580px) {
+      .slider-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-label-group {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-title {
+      font-family: var(--ff-sans, sans-serif);
+      font-size: 12px;
+      color: var(--on-surface);
+    }
+
+    .slider-value-badge {
+      font-family: var(--ff-mono, monospace);
+      font-size: 12px;
+      color: var(--on-surface-variant);
+      background: var(--surface-bright);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--stroke-default);
+    }
+
+    .lumi-slider-container {
+      position: relative;
+      width: 100%;
+      display: flex;
+      align-items: center;
+    }
+
+            .pattern-select {
+      background: var(--surface-bright);
+      color: var(--on-surface);
+      border: 1px solid var(--stroke-default);
+      border-radius: var(--r-s, 8px);
+      padding: 4px 8px;
+      font-family: var(--ff-mono, monospace);
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    /* Error Fallback Card */
+    .error-fallback-card {
+      padding: var(--spacing-l, 16px);
+      background: var(--surface-dim);
+      border-radius: var(--r-m, 12px);
+      text-align: center;
+      color: var(--on-surface-variant);
+      border: 1px solid var(--stroke-default);
+    }
+  </style>
+<script id="lumi-os-theme-init">
+(function() {
+  function syncBody() {
+    var dt = document.documentElement.getAttribute('data-theme');
+    if (document.body && (dt === 'dark' || dt === 'light')) {
+      document.body.classList.toggle('dark-mode', dt === 'dark');
+    }
+  }
+  function syncTheme(theme) {
+    if (theme !== 'dark' && theme !== 'light') return;
+    document.documentElement.setAttribute('data-theme', theme);
+    syncBody();
+  }
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(syncBody).observe(document.documentElement, {
+      attributes: true, attributeFilter: ['data-theme']
+    });
+  }
+  if (typeof document.addEventListener === 'function') {
+    document.addEventListener('DOMContentLoaded', syncBody);
+  }
+  try {
+    var mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq) {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) {
+        syncTheme(mq.matches ? 'dark' : 'light');
+      } else {
+        syncTheme(cur);
+      }
+      if (mq.addEventListener) {
+        mq.addEventListener('change', function(e) {
+          syncTheme(e.matches ? 'dark' : 'light');
+        });
+      }
+    }
+  } catch (e) {}
+  window.addEventListener('message', function(e) {
+    if (e.data && (e.data.type === 'set-theme' || e.data.type === 'APPLY_THEME') && e.data.theme) {
+      syncTheme(e.data.theme);
+    }
+  });
+})();
+</script>
+</head>
+<body>
+
+<div class="widget-container" id="ares-app">
+  <!-- Header Control Bar -->
+  <header class="ares-header">
+    <div class="ares-title-block">
+      <div class="ares-title">
+        <span class="status-indicator" id="adi-status-led"></span>
+        ARES OS v2.6 // NASA FLIGHT CONTROL
+      </div>
+      <div class="ares-subtitle">DEEP SPACE HABITAT BIOMETRIC & TELEMETRY SUITE</div>
+    </div>
+
+    <!-- ADI Stress Index readout -->
+    <div class="adi-badge-card">
+      <canvas id="adi-arc-canvas" width="36" height="36"></canvas>
+      <div class="adi-value-group">
+        <span class="adi-label">DISTRESS INDEX (ADI)</span>
+        <span class="adi-score" id="adi-score-text">0.20</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section 1: Profile Deck & Bio Telemetry -->
+  <div class="grid-two-col">
+    <!-- Editable Profile Deck -->
+    <div class="profile-card">
+      <div class="card-heading">
+        <span>ASTRONAUT PROFILE</span>
+        <span style="font-family: var(--ff-mono); font-size:12px; color:var(--primary);">MISSION SOL 342</span>
+      </div>
+      <div class="editable-grid">
+        <div class="field-group">
+          <label class="field-label" for="prof-name">NAME</label>
+          <input type="text" id="prof-name" class="field-input" value="Dr. Alex Vance">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="prof-callsign">CALLSIGN</label>
+          <input type="text" id="prof-callsign" class="field-input" value="PHOENIX-1">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="prof-role">ROLE</label>
+          <input type="text" id="prof-role" class="field-input" value="Commander / Bio-Engineer">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="prof-blood">BLOOD TYPE</label>
+          <input type="text" id="prof-blood" class="field-input" value="O-NEG">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="prof-suit">SUIT PRESS (kPa)</label>
+          <input type="number" id="prof-suit" class="field-input" value="29.6" step="0.1">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="prof-rad">RAD DOSE (mSv)</label>
+          <input type="number" id="prof-rad" class="field-input" value="14.2" step="0.1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-time ECG & Brainwave Canvas Feed -->
+    <div class="bio-feed-card">
+      <div class="card-heading">
+        <span>MEDICAL GRID // REAL-TIME ECG</span>
+        <span id="ecg-status-text" style="font-family: var(--ff-mono); font-size:12px; color:var(--positive);">NORMAL SINUS</span>
+      </div>
+      <div class="canvas-viewport" id="ecg-viewport">
+        <canvas id="ecgCanvas" class="bio-canvas"></canvas>
+      </div>
+      <div class="brainwave-canvas-viewport" id="brainwave-viewport">
+        <canvas id="brainCanvas" class="bio-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: VR Panorama & Earth Family Video Feed -->
+  <div class="media-grid">
+    <!-- WebGL 360 VR Panorama Viewport -->
+    <div class="vr-viewport-wrapper">
+      <div id="vr-container" style="width:100%; height:100%;"></div>
+      <div class="vr-controls-overlay">
+        <span style="font-size:12px; font-family:var(--ff-mono); color:#fff;">360° BIOPHILIC VR</span>
+        <div class="vr-scene-selector">
+          <button class="vr-chip active" data-scene="forest">FOREST</button>
+          <button class="vr-chip" data-scene="martian">HABITAT</button>
+          <button class="vr-chip" data-scene="orbit">EARTH ORBIT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Earth Family Message Stream & 432Hz Synth -->
+    <div class="earth-feed-card">
+      <div class="card-heading">
+        <span>EARTH COMM STREAM // BUFFERED</span>
+        <span style="font-family: var(--ff-mono); font-size:12px; color:var(--on-surface-variant);">DELAY: +14m 22s</span>
+      </div>
+      <div class="earth-canvas-viewport">
+        <canvas id="earthCanvas" class="bio-canvas"></canvas>
+      </div>
+      <div class="media-player-deck">
+        <button id="synth-toggle-btn" class="audio-synth-btn">
+          <span id="synth-icon">▶</span> 432 Hz SOOTHING AMBIENT SOUND
+        </button>
+        <span style="font-size:12px; font-family:var(--ff-mono); color:var(--on-surface-variant);" id="synth-status">OFFLINE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Manual Telemetry Control Deck -->
+  <div class="control-deck">
+    <div class="card-heading" style="border-bottom:none; padding-bottom:0;">
+      <span>MANUAL TELEMETRY OVERRIDE DECK</span>
+      <span style="font-family:var(--ff-mono); font-size:12px; color:var(--on-surface-variant);">MODULATES ADI IN REAL-TIME</span>
+    </div>
+
+    <div class="slider-grid">
+      <!-- Heart Rate Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">HEART RATE (HRM)</span>
+          <span class="slider-value-badge" id="hrm-val">74 BPM</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-hrm" data-key="hrm" min="40" max="180" value="74" style="--progress: 24.2%;">
+        </div>
+      </div>
+
+      <!-- HRV Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">HR VARIABILITY (HRV)</span>
+          <span class="slider-value-badge" id="hrv-val">68 ms</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-hrv" data-key="hrv" min="10" max="120" value="68" style="--progress: 52.7%;">
+        </div>
+      </div>
+
+      <!-- Sleep Quality Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">SLEEP QUALITY</span>
+          <span class="slider-value-badge" id="sleep-val">85%</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-sleep" data-key="sleepQuality" min="0" max="100" value="85" style="--progress: 85%;">
+        </div>
+      </div>
+
+      <!-- Last Time of Sleep (LTS) Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">LAST TIME OF SLEEP (LTS)</span>
+          <span class="slider-value-badge" id="lts-val">6.5 hrs</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-lts" data-key="lts" min="0" max="24" step="0.5" value="6.5" style="--progress: 27%;">
+        </div>
+      </div>
+
+      <!-- SpO2 Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">BLOOD OXYGEN (SpO2)</span>
+          <span class="slider-value-badge" id="spo2-val">98%</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-spo2" data-key="spo2" min="80" max="100" value="98" style="--progress: 90%;">
+        </div>
+      </div>
+
+      <!-- Cortisol Slider -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">CORTISOL LEVEL</span>
+          <span class="slider-value-badge" id="cortisol-val">0.25 µg/dL</span>
+        </div>
+        <div class="lumi-slider-container">
+          <input type="range" class="lumi-slider" id="slider-cortisol" data-key="cortisol" min="0.1" max="1.0" step="0.05" value="0.25" style="--progress: 16.6%;">
+        </div>
+      </div>
+
+      <!-- Brainwave Spectrum Dropdown -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">BRAINWAVE SPECTRUM</span>
+        </div>
+        <select class="pattern-select" id="select-brainwave" data-key="brainwave">
+          <option value="alpha" selected>ALPHA (8-12 Hz) - Calm / Focused</option>
+          <option value="beta">BETA (13-30 Hz) - Active / Alert</option>
+          <option value="theta">THETA (4-7 Hz) - Deep Relaxation</option>
+          <option value="delta">DELTA (0.5-3 Hz) - Deep Sleep</option>
+        </select>
+      </div>
+
+      <!-- ECG Rhythm Pattern Dropdown -->
+      <div class="slider-row">
+        <div class="slider-label-group">
+          <span class="slider-title">ECG RHYTHM PATTERN</span>
+        </div>
+        <select class="pattern-select" id="select-ecg-pattern" data-key="ecgPattern">
+          <option value="Normal" selected>NORMAL SINUS RHYTHM</option>
+          <option value="PVC">PREMATURE VENTRICULAR (PVC)</option>
+          <option value="Arrhythmia">SINUS ARRHYTHMIA</option>
+          <option value="ST Elevation">ST ELEVATION (ISCHEMIC STRESS)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Global State Object
+  const state = {
+    hrm: 74,
+    hrv: 68,
+    sleepQuality: 85,
+    lts: 6.5,
+    spo2: 98,
+    cortisol: 0.25,
+    brainwave: 'alpha',
+    ecgPattern: 'Normal',
+    adi: 0.20,
+    vrScene: 'forest',
+    audioPlaying: false
+  };
+
+  // Helper to resolve CSS variables for Canvas 2D / WebGL
+  function getCssVar(name) {
+    if (!name) return '';
+    const clean = name.replace(/^var\(/, '').replace(/\)$/, '').trim();
+    return getComputedStyle(document.documentElement).getPropertyValue(clean.startsWith('--') ? clean : '--' + clean).trim();
+  }
+
+  // --- ACUTE DISTRESS INDEX (ADI) CALCULATOR ---
+  function calculateADI() {
+    let base = 0.20;
+
+    // HRM factor (baseline ~70)
+    const hrmDelta = (state.hrm - 70) / 110;
+    
+    // HRV factor (lower HRV = higher stress)
+    const hrvDelta = (65 - state.hrv) / 100;
+
+    // SpO2 factor (drops below 98 increase distress)
+    const spo2Delta = Math.max(0, (98 - state.spo2) * 0.04);
+
+    // Cortisol factor
+    const cortisolDelta = (state.cortisol - 0.25) * 0.4;
+
+    // Sleep factor
+    const sleepDelta = (80 - state.sleepQuality) * 0.0025;
+
+    // LTS factor (sleep deprivation > 16h)
+    const ltsDelta = state.lts < 5 ? (5 - state.lts) * 0.06 : 0;
+
+    // ECG Pattern multiplier
+    let ecgDelta = 0;
+    if (state.ecgPattern === 'PVC') ecgDelta = 0.12;
+    if (state.ecgPattern === 'Arrhythmia') ecgDelta = 0.22;
+    if (state.ecgPattern === 'ST Elevation') ecgDelta = 0.40;
+
+    let totalADI = base + hrmDelta * 0.25 + hrvDelta * 0.20 + spo2Delta + cortisolDelta + sleepDelta + ltsDelta + ecgDelta;
+    
+    // Brainwave offset
+    if (state.brainwave === 'beta' && totalADI > 0.4) totalADI += 0.08;
+    if (state.brainwave === 'theta') totalADI -= 0.05;
+
+    return Math.min(1.0, Math.max(0.0, totalADI));
+  }
+
+  // --- ADI ARC & HEADER RENDERER ---
+  function renderADI() {
+    const score = calculateADI();
+    state.adi = score;
+
+    const scoreText = document.getElementById('adi-score-text');
+    if (scoreText) scoreText.textContent = score.toFixed(2);
+
+    const statusLed = document.getElementById('adi-status-led');
+    const ecgStatusText = document.getElementById('ecg-status-text');
+
+    let colorVar = '--positive';
+    let statusClass = '';
+    let statusName = state.ecgPattern.toUpperCase();
+
+    if (score >= 0.35 && score < 0.65) {
+      colorVar = '--chart-8';
+      statusClass = 'elevated';
+    } else if (score >= 0.65) {
+      colorVar = '--error';
+      statusClass = 'critical';
+    }
+
+    if (statusLed) {
+      statusLed.className = 'status-indicator ' + statusClass;
+    }
+
+    const resolvedColor = getCssVar(colorVar) || '#0ebc5f';
+    if (scoreText) scoreText.style.color = resolvedColor;
+    if (ecgStatusText) {
+      if (ecgStatusText) ecgStatusText.textContent = statusName;
+      ecgStatusText.style.color = resolvedColor;
+    }
+
+    // Render Canvas Mini Arc
+    const canvas = document.getElementById('adi-arc-canvas');
+    if (canvas && canvas.getContext) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const r = 14;
+
+      // Background Track
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.strokeStyle = getCssVar('--stroke-default') || 'rgba(0,0,0,0.1)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Progress Arc
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (2 * Math.PI * score);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.strokeStyle = resolvedColor;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+  }
+
+  // --- REAL-TIME ECG & BRAINWAVE ANIMATION CANVAS ---
+  let ecgPhase = 0;
+  function initBioCanvases() {
+    const ecgCanvas = document.getElementById('ecgCanvas');
+    const brainCanvas = document.getElementById('brainCanvas');
+
+    function drawECG() {
+      if (!ecgCanvas) return;
+      const vp = document.getElementById('ecg-viewport');
+      if (!vp) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = vp.clientWidth || 300;
+      const h = vp.clientHeight || 120;
+
+      if (ecgCanvas.width !== Math.floor(w * dpr) || ecgCanvas.height !== Math.floor(h * dpr)) {
+        ecgCanvas.width = Math.floor(w * dpr);
+        ecgCanvas.height = Math.floor(h * dpr);
+      }
+
+      const ctx = ecgCanvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // Draw Grid
+      ctx.strokeStyle = getCssVar('--stroke-default') || 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 0.5;
+      const gridSize = 15;
+      for (let x = 0; x < w; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Draw Waveform
+      const colorVar = state.adi > 0.65 ? '--error' : (state.adi > 0.35 ? '--chart-8' : '--positive');
+      ctx.strokeStyle = getCssVar(colorVar) || '#0ebc5f';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+
+      const bpm = state.hrm;
+      const bps = bpm / 60;
+      ecgPhase += 0.03 * (bps / 1.2);
+
+      const midY = h / 2;
+      for (let x = 0; x < w; x++) {
+        const t = (x / w) * 4 * Math.PI + ecgPhase;
+        let cycle = (t % (2 * Math.PI));
+
+        let waveY = 0;
+        // P-wave, QRS complex, T-wave procedural model
+        if (cycle > 0.5 && cycle < 0.7) {
+          waveY = - Math.sin((cycle - 0.5) / 0.2 * Math.PI) * 6; // P
+        } else if (cycle >= 0.9 && cycle < 0.95) {
+          waveY = 8; // Q
+        } else if (cycle >= 0.95 && cycle < 1.05) {
+          let spike = Math.sin((cycle - 0.95) / 0.1 * Math.PI);
+          waveY = - spike * (h * 0.38); // R spike
+          if (state.ecgPattern === 'ST Elevation') waveY -= 12;
+        } else if (cycle >= 1.05 && cycle < 1.1) {
+          waveY = 12; // S
+        } else if (cycle >= 1.2 && cycle < 1.5) {
+          let tAmp = state.ecgPattern === 'Arrhythmia' ? 14 : 9;
+          waveY = - Math.sin((cycle - 1.2) / 0.3 * Math.PI) * tAmp; // T
+        }
+
+        // Add PVC anomaly if selected
+        if (state.ecgPattern === 'PVC' && Math.floor(t / (2 * Math.PI)) % 3 === 0) {
+          waveY += Math.sin(x * 0.1) * 15;
+        }
+
+        const py = midY + waveY;
+        if (x === 0) ctx.moveTo(x, py);
+        else ctx.lineTo(x, py);
+      }
+      ctx.stroke();
+    }
+
+    function drawBrainwave() {
+      if (!brainCanvas) return;
+      const vp = document.getElementById('brainwave-viewport');
+      if (!vp) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = vp.clientWidth || 300;
+      const h = vp.clientHeight || 50;
+
+      if (brainCanvas.width !== Math.floor(w * dpr) || brainCanvas.height !== Math.floor(h * dpr)) {
+        brainCanvas.width = Math.floor(w * dpr);
+        brainCanvas.height = Math.floor(h * dpr);
+      }
+
+      const ctx = brainCanvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = getCssVar('--primary') || '#3186ff';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+
+      let freq = 10; // Alpha default
+      if (state.brainwave === 'beta') freq = 22;
+      if (state.brainwave === 'theta') freq = 6;
+      if (state.brainwave === 'delta') freq = 2;
+
+      const midY = h / 2;
+      for (let x = 0; x < w; x++) {
+        const py = midY + Math.sin(x * 0.08 * (freq / 10) + ecgPhase * 2) * (h * 0.3);
+        if (x === 0) ctx.moveTo(x, py);
+        else ctx.lineTo(x, py);
+      }
+      ctx.stroke();
+    }
+
+    function loop() {
+      drawECG();
+      drawBrainwave();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  // --- THREE.JS 360 VR PANORAMA MODULE ---
+  let vrRenderer, vrScene, vrCamera, vrSphere;
+  let isUserInteracting = false, onPointerDownPointerX = 0, onPointerDownPointerY = 0, lon = 0, onPointerDownLon = 0, lat = 0, onPointerDownLat = 0, phi = 0, theta = 0;
+
+  function initVRViewer() {
+    const container = document.getElementById('vr-container');
+    if (!container || typeof THREE === 'undefined') return;
+
+    const width = container.clientWidth || 300;
+    const height = container.clientHeight || 160;
+
+    vrScene = new THREE.Scene();
+    vrCamera = new THREE.PerspectiveCamera(75, width / height, 1, 1100);
+    vrCamera.target = new THREE.Vector3(0, 0, 0);
+
+    // Create Procedural Equirectangular Texture Canvas
+    const canvas360 = document.createElement('canvas');
+    canvas360.width = 1024;
+    canvas360.height = 512;
+    renderProceduralPanorama(canvas360, state.vrScene);
+
+    const texture = new THREE.CanvasTexture(canvas360);
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const geometry = new THREE.SphereGeometry(500, 60, 40);
+    // Invert geometry so inside faces are visible
+    geometry.scale(-1, 1, 1);
+
+    const material = new THREE.MeshBasicMaterial({ map: texture });
+    vrSphere = new THREE.Mesh(geometry, material);
+    vrScene.add(vrSphere);
+
+    vrRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    vrRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    vrRenderer.setSize(width, height);
+    container.appendChild(vrRenderer.domElement);
+
+    // Mouse & Touch Drag Look
+    container.addEventListener('pointerdown', (e) => {
+      isUserInteracting = true;
+      onPointerDownPointerX = e.clientX;
+      onPointerDownPointerY = e.clientY;
+      onPointerDownLon = lon;
+      onPointerDownLat = lat;
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (isUserInteracting) {
+        lon = (onPointerDownPointerX - e.clientX) * 0.2 + onPointerDownLon;
+        lat = (e.clientY - onPointerDownPointerY) * 0.2 + onPointerDownLat;
+      }
+    });
+
+    document.addEventListener('pointerup', () => { isUserInteracting = false; });
+
+    function animateVR() {
+      requestAnimationFrame(animateVR);
+      if (!isUserInteracting) lon += 0.05; // Gentle auto-drift
+
+      lat = Math.max(-85, Math.min(85, lat));
+      phi = THREE.MathUtils.degToRad(90 - lat);
+      theta = THREE.MathUtils.degToRad(lon);
+
+      vrCamera.target.x = 500 * Math.sin(phi) * Math.cos(theta);
+      vrCamera.target.y = 500 * Math.cos(phi);
+      vrCamera.target.z = 500 * Math.sin(phi) * Math.sin(theta);
+      vrCamera.lookAt(vrCamera.target);
+
+      vrRenderer.render(vrScene, vrCamera);
+    }
+    animateVR();
+  }
+
+  function renderProceduralPanorama(canvas, type) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+
+    if (type === 'forest') {
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#102213');
+      grad.addColorStop(0.5, '#204427');
+      grad.addColorStop(1, '#081109');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = '#3a7243';
+      for (let i = 0; i < 60; i++) {
+        const x = (i / 60) * w;
+        ctx.beginPath();
+        ctx.moveTo(x, h * 0.7);
+        ctx.lineTo(x + 15, h * 0.3);
+        ctx.lineTo(x + 30, h * 0.7);
+        ctx.fill();
+      }
+    } else if (type === 'martian') {
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, '#2e1208');
+      grad.addColorStop(0.5, '#5e230d');
+      grad.addColorStop(1, '#1a0903');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      // Orbit
+      ctx.fillStyle = '#02050c';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#1d63b8';
+      ctx.beginPath();
+      ctx.arc(w / 2, h * 1.2, 300, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function updateVRScene(type) {
+    state.vrScene = type;
+    if (vrSphere && vrSphere.material.map) {
+      const canvas360 = document.createElement('canvas');
+      canvas360.width = 1024;
+      canvas360.height = 512;
+      renderProceduralPanorama(canvas360, type);
+      vrSphere.material.map = new THREE.CanvasTexture(canvas360);
+      vrSphere.material.map.needsUpdate = true;
+    }
+  }
+
+  // --- EARTH FEED CANVAS ANIMATOR ---
+  function initEarthCanvas() {
+    const canvas = document.getElementById('earthCanvas');
+    if (!canvas) return;
+
+    let rot = 0;
+    function drawEarth() {
+      const vp = canvas.parentElement;
+      if (!vp) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = vp.clientWidth || 300;
+      const h = vp.clientHeight || 110;
+
+      if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+      }
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // Starfield
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 20; i++) {
+        const sx = (i * 37) % w;
+        const sy = (i * 19) % h;
+        ctx.fillRect(sx, sy, 1, 1);
+      }
+
+      // Rotating Earth Sphere
+      rot += 0.01;
+      const cx = w / 2;
+      const cy = h / 2;
+      const r = 35;
+
+      const grad = ctx.createRadialGradient(cx - 10, cy - 10, 5, cx, cy, r);
+      grad.addColorStop(0, '#388bfd');
+      grad.addColorStop(0.7, '#1f4287');
+      grad.addColorStop(1, '#071126');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Atmospheric Glow
+      ctx.strokeStyle = 'rgba(56, 139, 253, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Message Overlay Banner
+      ctx.fillStyle = getCssVar('--surface-translucent') || 'rgba(0,0,0,0.6)';
+      ctx.fillRect(10, h - 26, w - 20, 18);
+      ctx.fillStyle = getCssVar('--on-surface') || '#fff';
+      ctx.font = "10px 'Google Sans Code', monospace";
+      ctx.fillText("MSG: 'Thinking of you, Commander. Stay safe!' - Houston Ground", 16, h - 14);
+
+      requestAnimationFrame(drawEarth);
+    }
+    drawEarth();
+  }
+
+  // --- 432 Hz WEB AUDIO SYNTHESIZER ---
+  let audioCtx, osc1, osc2, gainNode;
+
+  function toggleAudioSynth() {
+    const btn = document.getElementById('synth-toggle-btn');
+    const status = document.getElementById('synth-status');
+
+    if (state.audioPlaying) {
+      if (gainNode) gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+      setTimeout(() => { if (audioCtx) audioCtx.suspend(); }, 500);
+      state.audioPlaying = false;
+      if (btn) btn.classList.remove('is-playing');
+      if (status) status.textContent = 'OFFLINE';
+      document.getElementById('synth-icon').textContent = '▶';
+    } else {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+
+        // Dual Binaural Oscillators targeting 432 Hz ambient vocal chord
+        osc1 = audioCtx.createOscillator();
+        osc2 = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(432, audioCtx.currentTime); // 432 Hz Tuning
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(436.5, audioCtx.currentTime); // 4.5 Hz Theta binaural beat
+
+        gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 1.5);
+
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        osc1.start();
+        osc2.start();
+      } else {
+        audioCtx.resume();
+        gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.5);
+      }
+
+      state.audioPlaying = true;
+      if (btn) btn.classList.add('is-playing');
+      if (status) status.textContent = '432 Hz ACTIVE';
+      document.getElementById('synth-icon').textContent = '⏸';
+    }
+  }
+
+  // --- CENTRAL REACTIVE STATE BINDINGS ---
+  function updateViz() {
+    renderADI();
+  }
+
+  function initInteractivity() {
+    // Bind Range Sliders
+    document.querySelectorAll('.lumi-slider').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const key = e.target.dataset.key;
+        const val = parseFloat(e.target.value);
+        state[key] = val;
+
+        // Progress Bar styling
+        const pct = ((val - e.target.min) / (e.target.max - e.target.min)) * 100;
+        e.target.style.setProperty('--progress', pct + '%');
+
+        // Update badge readouts
+        if (key === 'hrm') document.getElementById('hrm-val').textContent = val + ' BPM';
+        if (key === 'hrv') document.getElementById('hrv-val').textContent = val + ' ms';
+        if (key === 'sleepQuality') document.getElementById('sleep-val').textContent = val + '%';
+        if (key === 'lts') document.getElementById('lts-val').textContent = val + ' hrs';
+        if (key === 'spo2') document.getElementById('spo2-val').textContent = val + '%';
+        if (key === 'cortisol') document.getElementById('cortisol-val').textContent = val + ' µg/dL';
+
+        updateViz();
+      });
+    });
+
+    // Bind Select Dropdowns
+    document.querySelectorAll('.pattern-select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const key = e.target.dataset.key;
+        state[key] = e.target.value;
+        updateViz();
+      });
+    });
+
+    // Bind VR Scene Selector Buttons
+    document.querySelectorAll('.vr-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.vr-chip').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        updateVRScene(e.target.dataset.scene);
+      });
+    });
+
+    // Audio Synth Toggle
+    const synthBtn = document.getElementById('synth-toggle-btn');
+    if (synthBtn) synthBtn.addEventListener('click', toggleAudioSynth);
+  }
+
+  // --- INITIALIZATION ENTRYPOINT ---
+  function initApp() {
+    initInteractivity();
+    initBioCanvases();
+    initVRViewer();
+    initEarthCanvas();
+    updateViz();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+
+  // --- IFRAME RESIZE & THEME SYNC ---
+  const applyTheme = t => {
+    document.documentElement.setAttribute('data-theme', t);
+    if (typeof updateViz === 'function') updateViz();
+  };
+  if (!document.documentElement.hasAttribute('data-theme') && window.matchMedia?.('(prefers-color-scheme: dark)').matches) applyTheme('dark');
+  window.addEventListener('message', e => { if (e.data?.type === 'set-theme' || e.data?.type === 'APPLY_THEME') applyTheme(e.data.theme); });
+
+  (function autoResize() {
+    function notifyHeight() {
+      const c = document.querySelector('.widget-container') || document.body;
+      if (!c) return;
+      const h = Math.ceil(Math.max(c.getBoundingClientRect().bottom, c.scrollHeight));
+      window.parent.postMessage({type: 'widget-resize', height: h}, '*');
+    }
+    window.addEventListener('load', () => setTimeout(notifyHeight, 120));
+    new ResizeObserver(() => notifyHeight()).observe(document.querySelector('.widget-container') || document.body);
+  })();
+</script>
+
+<script>/*luminous-slider-normalizer*/(function(){function f(r){if(!r||r.type!=='range')return;var mn=parseFloat(r.min||'0'),mx=parseFloat(r.max||'100'),v=parseFloat(r.value);if(isNaN(v))v=(mn+mx)/2;var p=mx>mn?((v-mn)/(mx-mn))*100:50;r.style.setProperty('--progress',p+'%');r.style.removeProperty('--slider-fill');}function all(){document.querySelectorAll('input[type="range"], .lumi-slider').forEach(f);}document.addEventListener('input',function(e){f(e.target);});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',all);else all();})();</script>
+</body>
+</html>
+```

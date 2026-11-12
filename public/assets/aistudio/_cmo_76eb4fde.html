@@ -1,0 +1,122 @@
+<!-- ============ CMO / FLIGHT COMMANDER CONSOLE ============ -->
+<div id="cmoInterface">
+  <header class="ares-header" style="border-color: var(--error);">
+    <div class="profile-block">
+      <div class="avatar">{% if profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name }}">{% else %}{{ profile.initials }}{% endif %}</div>
+      <div>
+        <span class="ares-sys-tag" style="color: var(--error);">{% if role == 'captain' %}FLIGHT COMMANDER CONSOLE{% else %}CREW MEDICAL OFFICER (CMO) OVERRIDE PORTAL{% endif %}</span>
+        <h2 class="ares-subject-id">{% if role == 'captain' %}COMMANDER{% else %}CMO OFFICER{% endif %}: {{ profile.short_name|upper }} [ID: {{ profile.crew_id }}]</h2>
+        <div class="profile-sub">{{ profile.specialty }}</div>
+      </div>
+    </div>
+    <div class="ares-status-pills">
+      <div class="ares-badge" style="border-color: var(--error);">
+        <span class="ares-badge-dot critical"></span><span>SYSTEM ADI ALARM: <strong id="cmoAlarmState">ACTIVE MONITORING</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <div class="ares-main-grid">
+    <!-- ADI ALARM BANNER -->
+    <div class="cmo-alert-banner" id="cmoAlarmBanner" hidden>
+      <span id="cmoAlarmText"></span>
+      <button class="ares-tab-btn danger" id="ackAlarmBtn" type="button">Acknowledge</button>
+    </div>
+
+    <!-- SECTION 1: ALL CREW + SELECTED PROFILE (Point 2) -->
+    <div class="graph-card">
+      <div class="graph-title" style="margin-bottom: 12px;">ALL CREW MEMBERS BIOMETRICS &amp; ADI STATUS &middot; click a card to open the profile</div>
+      <div class="crew-grid" id="crewGrid"><span class="muted">Loading crew telemetry...</span></div>
+    </div>
+
+    <div class="graph-card" id="profileViewerCard">
+      <div class="graph-title" style="margin-bottom: 10px;">ASTRONAUT PROFILE</div>
+      <div class="profile-viewer" id="profileViewer"><span class="muted">Select a crew member above.</span></div>
+    </div>
+
+    <!-- SECTION 2: EMERGENCY SECTION - AI CONDITION SCREENING (Point 8) -->
+    <div class="graph-card" style="border-color: var(--warning);" id="emergencySection">
+      <div class="graph-title" style="color: var(--warning);">EMERGENCY SECTION &middot; AI CONDITION SCREENING &amp; SUGGESTED ACTIONS</div>
+      <p class="muted" style="margin: 6px 0 0;">Crew who use the POD are screened continuously from biometrics and their PFA messages. Updates automatically.</p>
+      <div class="assess-list" id="assessList"><span class="muted">Analysing...</span></div>
+      <div class="disclaimer">AI-suggested screening for decision support only - not a diagnosis. The CMO must confirm clinically, and medication decisions rest with the CMO and ground medical support.</div>
+    </div>
+
+    <div class="two-col">
+      <!-- SECTION 3: GROUND SUPPORT CALL (Point 7) -->
+      <div class="graph-card" style="border-color: var(--primary);">
+        <div class="graph-title">CALL GROUND SUPPORT</div>
+        <p class="muted" style="margin: 6px 0 10px;">Use when the CMO cannot take action or needs backup. Mission Control receives the request immediately.</p>
+        <div style="display: grid; gap: 8px;">
+          <select id="callReason" class="field">
+            <option value="cmo_unable">CMO unable to act / incapacitated</option>
+            <option value="beyond_scope">Case beyond onboard medical scope</option>
+            <option value="second_opinion">Need specialist second opinion</option>
+            <option value="equipment">Medical equipment failure</option>
+            <option value="other">Other</option>
+          </select>
+          <select id="callSubject" class="field">
+            <option value="">Patient: (none / general)</option>
+            {% for p in crew %}<option value="{{ p.pk }}">{{ p.short_name }} ({{ p.callsign }})</option>{% endfor %}
+          </select>
+          <select id="callPriority" class="field">
+            <option value="urgent">Priority: URGENT</option>
+            <option value="critical">Priority: CRITICAL</option>
+            <option value="routine">Priority: ROUTINE</option>
+          </select>
+          <textarea id="callMessage" class="field" placeholder="Situation summary for ground (optional)..." maxlength="1000"></textarea>
+          <button class="btn-danger" id="callGroundBtn" type="button" style="background: var(--accent)">&#9742; CALL GROUND SUPPORT</button>
+          <div id="callStatus" class="status-msg"></div>
+        </div>
+        <div class="call-list" id="callList"></div>
+      </div>
+
+      <!-- SECTION 4: FLIGHT COMMANDER + CMO EMERGENCY OVERRIDE PROTOCOL (Point 3) -->
+      <div class="graph-card" style="border-color: var(--error);">
+        <div class="graph-title" style="color: var(--error);">EMERGENCY TRANQUILIZER PROTOCOL (ETP) &middot; COMMANDER + CMO OVERRIDE</div>
+        <p class="muted" style="margin: 6px 0 10px;">Requires Dual-Key Confidential Authorization. Codes are verified on the server, every attempt is logged, and 3 wrong attempts lock the console for 5 minutes.</p>
+
+        <label class="step-label">1. SELECT PATIENT:</label>
+        <select id="etpTarget" class="code-input" style="margin: 4px 0 10px;">
+          {% for p in crew %}<option value="{{ p.pk }}">{{ p.short_name }} ({{ p.callsign }})</option>{% endfor %}
+        </select>
+
+        <label class="step-label">2. SELECT TRANQUILIZER AGENT:</label>
+        <select id="tranqSelect" class="code-input" style="margin: 4px 0 10px;">
+          <option value="Haloperidol 5mg">Haloperidol 5mg (Acute Psychosis Override)</option>
+          <option value="Diazepam 10mg">Diazepam 10mg (Severe Agitation/Panic)</option>
+          <option value="Midazolam 5mg">Midazolam 5mg (Rapid Sedation)</option>
+        </select>
+
+        <label class="step-label">3. PHYSICAL SAFETY CHECKLIST:</label>
+        <div class="checklist-group">
+          <label><input type="checkbox" class="chk-restraint"> Limb Restraints Secured to Pod Structure</label>
+          <label><input type="checkbox" class="chk-restraint"> Airway &amp; SpO2 Sensor Clear</label>
+          <label><input type="checkbox" class="chk-restraint"> Autonomic Port Infusion Line Connected</label>
+        </div>
+
+        <div class="dual-key-box">
+          <span class="step-label" style="color:var(--error);">4. DUAL-KEY CONFIDENTIAL AUTHORIZATION:</span>
+          <div style="margin-top: 8px;"><span class="muted">FLIGHT COMMANDER CONFIDENTIAL CODE:</span>
+            <input type="password" id="captainCode" class="code-input" placeholder="COMMANDER CODE" maxlength="6" autocomplete="off"></div>
+          <div style="margin-top: 8px;"><span class="muted">CMO CONFIDENTIAL CODE:</span>
+            <input type="password" id="cmoCode" class="code-input" placeholder="CMO CODE" maxlength="6" autocomplete="off"></div>
+          <button id="btnVerifyKeys" class="ares-tab-btn" type="button" style="margin-top: 10px; width:100%" disabled>VERIFY DUAL KEY</button>
+          <button id="btnEtpExecute" class="btn-danger" style="margin-top: 8px;" disabled type="button">EXECUTE ETP &amp; SEDATIVE DEPLOYMENT (LOCKED)</button>
+          <div id="etpStatus" class="status-msg"></div>
+        </div>
+
+        <div class="graph-title" style="margin-top: 14px;">OVERRIDE AUDIT LOG</div>
+        <table class="audit" id="auditTable">
+          <thead><tr><th>Time</th><th>Operator</th><th>Patient</th><th>Stage</th><th>Result</th></tr></thead>
+          <tbody>
+            {% for l in override_log %}
+            <tr><td>{{ l.created_at|date:"H:i:s" }}</td><td>{{ l.operator.short_name }}</td><td>{{ l.target.short_name }}</td>
+              <td>{{ l.stage }}</td><td class="{% if l.success %}ok-text{% else %}fail-text{% endif %}">{% if l.success %}OK{% else %}FAIL{% endif %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

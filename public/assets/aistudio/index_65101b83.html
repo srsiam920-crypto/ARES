@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>ARES OS v2.6 - Deep-Space Neuro-Therapeutics &amp; CMO Portal</title>
+  <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+</head>
+<body class="role-{{ role }}"
+      style="--theme: {{ profile.theme_color }};{% if bg_url %} --bg-img: url('{{ bg_url }}');{% endif %}">
+
+<div class="widget-container">
+
+  <!-- TOP BAR: signed-in user, voice guide (Point 9), logout -->
+  <div class="topbar">
+    <span>SIGNED IN: <strong>{{ profile.short_name }}</strong> &middot; {{ profile.get_role_display|upper }}</span>
+    <div class="topbar-right">
+      <div class="narrator-bar" id="narratorBar">
+        <span class="speaking-dot" id="speakDot"></span>
+        <span>VOICE GUIDE:</span>
+        <button class="ares-tab-btn" id="narrToggle" type="button">OFF</button>
+        <button class="ares-tab-btn" id="narrNow" type="button">&#128266; Narrate screen</button>
+        <button class="ares-tab-btn" id="narrStop" type="button">&#9632; Stop</button>
+        <select id="narrRate" class="ares-select" title="Speech speed">
+          <option value="0.85">Slow</option>
+          <option value="1" selected>Normal</option>
+          <option value="1.2">Fast</option>
+        </select>
+      </div>
+      <a class="logout-link" href="{% url 'logout' %}">LOG OUT</a>
+    </div>
+  </div>
+
+  {% if role == 'astronaut' %}
+    {% include "core/_pod.html" %}
+  {% elif role == 'ground' %}
+    {% include "core/_ground.html" %}
+  {% else %}
+    {% include "core/_cmo.html" %}
+  {% endif %}
+
+</div>
+
+{{ boot|json_script:"ares-boot" }}
+<script src="{% static 'core/js/main.js' %}"></script>
+</body>
+</html>

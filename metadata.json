@@ -1,0 +1,6 @@
+{
+  "name": "ARES UI - Autonomous Recovery & Emergency System",
+  "description": "Futuristic deep-space habitat pod interface featuring AI Psychological First Aid (PFA) protocol voiceovers, biometric facial authorization, CMO psychiatric diagnostics, Ground Station uplink, and Commander emergency override.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

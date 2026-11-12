@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARES OS v2.6 - Crew Login</title>
+  <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+</head>
+<body class="login-page">
+  <form class="login-card" method="post" autocomplete="off">
+    {% csrf_token %}
+    <span class="ares-sys-tag">ARES OS v2.6 // CREW AUTHENTICATION</span>
+    <div class="login-title">Sign in to your station</div>
+    <div class="muted">Select your profile, then enter your passcode.</div>
+
+    <div class="pick-grid" id="pickGrid">
+      {% for p in people %}
+      <button type="button" class="pick" data-username="{{ p.user.username }}" style="--theme: {{ p.theme_color }}">
+        <span class="avatar">{% if p.profile_picture %}<img src="{{ p.profile_picture.url }}" alt="">{% else %}{{ p.initials }}{% endif %}</span>
+        <strong>{{ p.short_name }}</strong>
+        <span class="muted">{{ p.get_role_display }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    {% if error %}<div class="login-error">{{ error }}</div>{% endif %}
+
+    <label class="login-field">USERNAME
+      <input class="field" type="text" name="username" id="loginUser" required autofocus>
+    </label>
+    <label class="login-field">PASSCODE
+      <input class="field" type="password" name="password" required>
+    </label>
+    <button class="ares-tab-btn is-active" style="width:100%;padding:10px" type="submit">AUTHENTICATE</button>
+  </form>
+
+  <script>
+    document.querySelectorAll('.pick').forEach(function (b) {
+      b.addEventListener('click', function () {
+        document.querySelectorAll('.pick').forEach(function (x) { x.classList.remove('selected'); });
+        b.classList.add('selected');
+        document.getElementById('loginUser').value = b.dataset.username;
+        document.querySelector('input[name=password]').focus();
+      });
+    });
+  </script>
+</body>
+</html>

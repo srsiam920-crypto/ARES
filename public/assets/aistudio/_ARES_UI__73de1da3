@@ -1,0 +1,14 @@
+﻿Things to add in ARES UI:
+1. Ground station interface.
+ 2.Separate Astronaut profile.(in both POD and CMO interface  
+  
+ 
+3. Flight commander-CMO emergency override protocol
+  
+
+4.Authentication system(  in the pod UI )
+5. Separate profile picture for the astronauts' login, and the background would change if a different astronaut logs in ( The picture would be entered manually, and all pictures would be in the POD UI )
+6. Add Media (  in the POD UI )
+7. Add a call option to the ground support in a situation where the CMO cannot take steps; it would be in the CMO UI.
+8. Make an emergency section where the CMO would see what kind of disorder the astronauts who use the phone have, which will be diagnosed by AI suggestion, and what to do, as suggested by AI.
+9. Add a sound system ( AI system that will narrate to the astronaut the software )

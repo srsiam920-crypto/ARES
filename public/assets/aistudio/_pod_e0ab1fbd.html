@@ -1,0 +1,166 @@
+<!-- ================= POD UI (ASTRONAUT INTERFACE) ================= -->
+<div id="podInterface">
+  <header class="ares-header">
+    <!-- Point 2: separate astronaut profile, Point 5: personal picture -->
+    <div class="profile-block">
+      <div class="avatar">{% if profile.profile_picture %}<img src="{{ profile.profile_picture.url }}" alt="{{ profile.full_name }}">{% else %}{{ profile.initials }}{% endif %}</div>
+      <div>
+        <span class="ares-sys-tag">ARES OS v2.6 // CREW NEURO-INTERFACE</span>
+        <h2 class="ares-subject-id">SUBJECT: {{ profile.short_name|upper }} ({{ profile.callsign }}) [ID: {{ profile.crew_id }}]</h2>
+        <div class="profile-sub">{{ profile.full_name }}{% if profile.specialty %} &middot; {{ profile.specialty }}{% endif %}</div>
+      </div>
+    </div>
+    <div class="ares-status-pills">
+      <div class="ares-badge">
+        <span id="podAdiDot" class="ares-badge-dot"></span>
+        <span>ADI: <strong id="podAdiVal">--</strong></span>
+      </div>
+      <div class="ares-badge"><span>LTS (LAST SLEEP): <strong>06h 45m AGO</strong></span></div>
+    </div>
+  </header>
+
+  <div class="ares-main-grid">
+    <nav class="ares-nav-bar" id="podNav">
+      <button class="ares-tab-btn is-active" data-tab="pod-telemetry">BIOMETRICS &amp; WAVEFORMS</button>
+      <button class="ares-tab-btn" data-tab="pod-therapeutics">THERAPEUTIC MATRIX</button>
+      <button class="ares-tab-btn" data-tab="pod-pfa">AI PFA PROTOCOL</button>
+      <button class="ares-tab-btn" data-tab="pod-library">MEDIA LIBRARY</button>
+      <button class="ares-tab-btn" data-tab="pod-media">FAMILY MEDIA &amp; SAFETY</button>
+    </nav>
+
+    <!-- TAB 1: TELEMETRY -->
+    <div id="pod-telemetry" class="tab-panel">
+      <div class="ares-metrics-row" style="margin-bottom: 12px;">
+        <div class="metric-card"><span class="metric-label">Heart Rate</span>
+          <div><span id="metricHr" class="metric-val">--</span> <span class="metric-unit">BPM</span></div></div>
+        <div class="metric-card"><span class="metric-label">HR Variability</span>
+          <div><span id="metricHrv" class="metric-val">--</span> <span class="metric-unit">ms</span></div></div>
+        <div class="metric-card"><span class="metric-label">Sleep Quality Score</span>
+          <div><span id="metricSleep" class="metric-val" style="color: var(--positive);">--</span> <span class="metric-unit">%</span></div></div>
+        <div class="metric-card"><span class="metric-label">Voice Jitter</span>
+          <div><span id="metricJitter" class="metric-val">--</span> <span class="metric-unit">%</span></div></div>
+        <div class="metric-card"><span class="metric-label">SpO2</span>
+          <div><span id="metricSpo2" class="metric-val">--</span> <span class="metric-unit">%</span></div></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+        <div class="graph-card">
+          <div class="graph-title">ECG LEAD II (LIVE TRACE)</div>
+          <div style="height: 160px;"><canvas id="ecgCanvas" style="width:100%; height:100%;"></canvas></div>
+        </div>
+        <div class="graph-card">
+          <div class="graph-title">EEG POWER SPECTRUM (SLOW WAVE)</div>
+          <div style="height: 160px;"><canvas id="eegCanvas" style="width:100%; height:100%;"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: THERAPEUTIC MATRIX -->
+    <div id="pod-therapeutics" class="tab-panel" style="display: none;">
+      <div class="controls-grid">
+        <div class="ctrl-group">
+          <div class="ctrl-title"><span>PHOTOTHERAPY (CIRCADIAN)</span>
+            <span id="photoCctBadge" style="color: var(--primary); font-family: monospace;">1800K Amber</span></div>
+          <div class="ctrl-row"><span class="ctrl-label">Spectrum Preset</span>
+            <div class="ares-seg-group">
+              <button class="ares-seg-btn" data-photo="wake" type="button">Wake (6500K)</button>
+              <button class="ares-seg-btn is-active" data-photo="sleep" type="button">Sleep (1800K)</button>
+            </div></div>
+          <div class="ctrl-row"><span class="ctrl-label">Intensity Brightness</span>
+            <div class="lumi-slider-container">
+              <input type="range" id="photoBrightness" class="lumi-slider" min="0" max="100" value="15" data-unit="%">
+              <div id="photoBrightness-val" class="lumi-slider-value">15%</div></div></div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="ctrl-title"><span>NEURO-ACOUSTIC ENGINE</span>
+            <span id="binauralBadge" style="color: var(--positive); font-family: monospace;">Active</span></div>
+          <div class="ctrl-row"><span class="ctrl-label">Binaural Frequency</span>
+            <select id="binauralFreq" class="ares-select">
+              <option value="4">4 Hz (Delta - Deep Recovery)</option>
+              <option value="6" selected>6 Hz (Theta - Anxiety Relief)</option>
+              <option value="10">10 Hz (Alpha - Calm Focus)</option>
+              <option value="18">18 Hz (Beta - Alertness)</option>
+            </select></div>
+          <div class="ctrl-row"><span class="ctrl-label">Earth Soundscape</span>
+            <select id="soundscapeSelect" class="ares-select">
+              <option value="off">Muted / Silence</option>
+              <option value="rainforest" selected>Pacific Northwest Rain</option>
+              <option value="ocean">Pacific Ocean Surf</option>
+              <option value="wind">Alpine Pine Wind</option>
+            </select></div>
+        </div>
+
+        <div class="ctrl-group">
+          <div class="ctrl-title"><span>VIBROACOUSTIC &amp; PRESSURE</span>
+            <span style="font-family: monospace; color: var(--text-muted);">Somatosensory</span></div>
+          <div class="ctrl-row"><span class="ctrl-label">Bed Vibro Frequency</span>
+            <div class="lumi-slider-container">
+              <input type="range" id="vibroFreq" class="lumi-slider" min="20" max="100" value="40" data-unit=" Hz">
+              <div id="vibroFreq-val" class="lumi-slider-value">40 Hz</div></div></div>
+          <div class="ctrl-row"><span class="ctrl-label">Deep-Pressure Seat</span>
+            <div class="lumi-slider-container">
+              <input type="range" id="seatPressure" class="lumi-slider" min="0" max="20" value="12" data-unit=" kPa">
+              <div id="seatPressure-val" class="lumi-slider-value">12 kPa</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: AI PFA PROTOCOL -->
+    <div id="pod-pfa" class="tab-panel" style="display: none;">
+      <div class="chat-card">
+        <div class="chat-messages" id="pfaStream">
+          {% for m in chat_messages %}
+            <div class="chat-msg {{ m.sender }}"><strong>[{% if m.sender == 'crew' %}{{ profile.short_name }}{% else %}ARES AI - PFA{% endif %}]</strong><br>{{ m.message }}</div>
+          {% empty %}
+            <div class="chat-msg ares"><strong>[ARES AI - Psychological First Aid (PFA)]</strong><br>Astronaut {{ profile.short_name }}, I'm here with you. I monitor your ADI continuously and can adjust the Therapeutic Matrix for you. How are you feeling right now?</div>
+          {% endfor %}
+        </div>
+        <div class="media-input-bar">
+          <input type="text" id="pfaInput" placeholder="Type message or express feelings..." maxlength="1000">
+          <button class="ares-tab-btn" id="pfaAttachBtn" type="button">&#128206; Attach Audio/Media</button>
+          <input type="file" id="mediaUpload" style="display: none;" accept="audio/*,video/*,image/*">
+          <button class="ares-tab-btn is-active" id="pfaSendBtn" type="button">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: MEDIA LIBRARY (Point 6) -->
+    <div id="pod-library" class="tab-panel" style="display: none;">
+      <div class="graph-card">
+        <div class="graph-title">MY MEDIA LIBRARY</div>
+        <p class="muted" style="margin:6px 0 10px">Music, voice notes, videos and photos for relaxation and morale. Shared items come from Earth / mission support.</p>
+        <div class="upload-row">
+          <input class="field" type="text" id="libTitle" placeholder="Title (optional)" maxlength="120">
+          <input class="field" type="file" id="libFile" accept="audio/*,video/*,image/*">
+          <button class="ares-tab-btn is-active" id="libUploadBtn" type="button">&#8679; Add media</button>
+        </div>
+        <div id="libStatus" class="status-msg"></div>
+        <div class="media-grid" id="mediaGrid"></div>
+      </div>
+    </div>
+
+    <!-- TAB 5: FAMILY MEDIA & SAFETY -->
+    <div id="pod-media" class="tab-panel" style="display: none;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+        <div class="graph-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="graph-title">FAMILY MEDIA BUFFER (ASYNC RECOVERY)</span>
+            <span style="font-family: monospace; color: var(--positive); font-size: 11px;">PRE-BUFFERED</span>
+          </div>
+          <div style="position: relative; width: 100%; height: 160px; background: #050a14; border-radius: 8px; overflow: hidden;">
+            <canvas id="mediaCanvas" style="display: block; width: 100%; height: 100%;"></canvas>
+          </div>
+          <div style="display: flex; gap: 8px; justify-content: space-between; align-items: center; margin-top: 8px;">
+            <span class="muted">Message #42: Family Birthday Video (Earth +22m latency)</span>
+            <button id="mediaPlayBtn" class="ares-tab-btn is-active" type="button">PLAY SIMULATION</button>
+          </div>
+        </div>
+        <div class="ctrl-group" style="border-color: rgba(255, 76, 69, 0.3);">
+          <div class="ctrl-title" style="color: var(--warning);"><span>DISTRESS ESCALATION MONITOR</span>
+            <span style="font-family: monospace; font-size: 11px;">AUTOMATIC LINK</span></div>
+          <p class="muted" style="margin: 0;">Biometric trends are automatically synchronized with the Crew Medical Officer (CMO). If ADI exceeds 0.70, emergency protocols will engage on the CMO Console.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
