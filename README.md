@@ -50,15 +50,15 @@ Live at [**https://ares-os.ai.studio/**](https://ares-os.ai.studio/), **ARES OS 
 
 * Tracks **Lead-II ECG** ($87\text{ BPM}$), depressed **Heart Rate Variability (HRV)** ($53\text{ ms}$), blood oxygen ($\text{SpO}_2 = 98\%$), **EEG Power Spectra** ($\delta, \theta, \alpha, \beta$ bands), and **Acoustic Voice-Pitch Jitter** ($3.2\%$) alongside $10\text{ RPM}$ ($0.22g$) short-radius centrifuge telemetry.
 
-* Computes a real-time composite **Acute Distress Index (**$\text{ADI} = 0.59\text{ Moderate}$**)** using standardized thresholds from the **AGBRESA 60-Day Bed Rest Study**.
+* Computes a real-time composite **Acute Distress Index (ADI = 0.59 Moderate)** using standardized thresholds from the **AGBRESA 60-Day Bed Rest Study**.
 
 $$
-\text{ADI} = w_1 \left(\frac{\Delta \text{HR}}{\text{HR}_0}\right) + w_2 \left(\frac{\text{HRV}_0 - \text{HRV}}{\text{HRV}_0}\right) + w_3 \left(\frac{\beta_{\text{EEG}}}{\alpha_{\text{EEG}} + \theta_{\text{EEG}}}\right) + w_4 (\text{Jitter}_{\%})
+\mathrm{ADI} = w_1 \left(\frac{\Delta \mathrm{HR}}{\mathrm{HR}_0}\right) + w_2 \left(\frac{\mathrm{HRV}_0 - \mathrm{HRV}}{\mathrm{HRV}_0}\right) + w_3 \left(\frac{\beta_{\mathrm{EEG}}}{\alpha_{\mathrm{EEG}} + \theta_{\mathrm{EEG}}}\right) + w_4 \left(\mathrm{Jitter}_{\mathrm{pct}}\right)
 $$
 
 ### 2. Closed-Loop Therapeutic Matrix
 
-When the $\text{ADI}$ crosses nominal Permissible Outcome Limits, **ARES OS** autonomously initiates a gentle, zero-effort environmental reset:
+When the $\mathrm{ADI}$ crosses nominal Permissible Outcome Limits, **ARES OS** autonomously initiates a gentle, zero-effort environmental reset:
 
 * **Dynamic Circadian Phototherapy:** Shifts solid-state cabin lighting from $6500\text{ K}$ Wake Cyan to a blue-depleted $1800\text{ K}$ Sleep Amber spectrum to stimulate endogenous melatonin production and protect the $8.5\text{-hour}$ sleep window per **NASA-STD-3001 \[V1 6001\]**.
 
